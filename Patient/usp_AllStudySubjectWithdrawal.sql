@@ -27,11 +27,17 @@ SET @UpdatedOn = CAST(GETDATE() AS SMALLDATETIME)
 PRINT CONVERT(CHAR(23), @UpdatedOn, 121) + ' [usp_AllStudySubjectWithdrawal][' + @@SERVERNAME + '][' + SYSTEM_USER + ']'
 PRINT 'INSERT [ITMIDW].[dbo].[tblSubjectWithDrawal]...'
 
---drop table
+--*********************************************
+--drop temp table--****************************
+--*********************************************
+
 IF OBJECT_ID('tempdb..#T') IS NOT NULL
 DROP TABLE #T  
 
---Create temp table
+--*************************************************
+--Create blank temp table for eventual withdrawals--
+--*************************************************
+
 SELECT  CONVERT(varchar(100),NULL) AS Subject
 ,CONVERT(varchar(100),NULL) AS site
 ,CONVERT(varchar(100),NULL) AS sitenumber
@@ -41,6 +47,9 @@ SELECT  CONVERT(varchar(100),NULL) AS Subject
 ,CONVERT(varchar(100),NULL) AS WDOTH
 INTO #T
 
+--*********************************************
+--****insert DIFZ withdrawls into temp table--*
+--*********************************************
 INSERT INTO #t (subject, site)
 SELECT
 	sub.subjectID
@@ -50,7 +59,10 @@ FROM itmidifz.genesis.ParticipantWithdrawal AS ParticipantWithdrawal
 		on sub.sourceSystemSubjectID = CONVERT(VARCHAR(100),ParticipantWithdrawal.participantID)
 WHERE sub.orgSourceSystemID = (SELECT ss.sourceSystemID FROM itmidw.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'DIFZ') 
 
---insert study 101 data
+--*********************************************--*********************************************
+--insert study 101 data, this is manual for exported spreadsheet given by Clinical data team-
+--*********************************************--*********************************************
+
 INSERT INTO #t (subject, site, sitenumber, instanceName, folderID, WDDAT_RAW, WDOTH) SELECT '101-059','withdrew','','','','P, C',''
 INSERT INTO #t (subject, site, sitenumber, instanceName, folderID, WDDAT_RAW, WDOTH) SELECT '101-098','withdrew','','','','P, C',''
 INSERT INTO #t (subject, site, sitenumber, instanceName, folderID, WDDAT_RAW, WDOTH) SELECT '101-114','withdrew','MISSING DAD','B, S, A','','B, S, A, P, C',''
@@ -106,13 +118,19 @@ INSERT INTO #t (subject, site, sitenumber, instanceName, folderID, WDDAT_RAW, WD
 INSERT INTO #t (subject, site, sitenumber, instanceName, folderID, WDDAT_RAW, WDOTH) SELECT	'101-038',	'withdrew',	'','','','',''
 INSERT INTO #t (subject, site, sitenumber, instanceName, folderID, WDDAT_RAW, WDOTH) SELECT	'101-074',	'withdrew',	'','','','',''
 
---delete any row where the subject is NULL truncate table [ITMIDW].[tblSubjectWithDrawal]
+--*********************************************--*********************************************--*********************************************
+--delete any row where the subject is NULL, done to remove blank record inserted to create temp table--**************************************
+--*********************************************--*********************************************--*********************************************
 DELETE FROM #T where subject IS NULL
 
---**Truncate table 
+--*********************************************--
+--**Truncate table --table refreshed each time*--
+--*********************************************--
 TRUNCATE TABLE [ITMIDW].[tblSubjectWithDrawal]
 
---**INSERT Statement int o
+--*************************************************
+--**INSERT Statement into ITMIDW table-- 101*******
+--*************************************************
 INSERT INTO  [ITMIDW].[tblSubjectWithDrawal]
            ([subjectID]
            ,[subjectWithReason]
@@ -125,7 +143,7 @@ sub.subjectID
  --,<subjectWithReason, varchar(100),>
 , CASE WHEN LEN(wdoth) =  0 THEN site ELSE wdoth END AS withReason
  --,<SourceSystemID, int,>
-, 13
+, (SELECT ss.sourceSystemID FROM itmidw.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'INFOPATH') 
  --,<createdDate, datetime,>
 , GETDATE()
  --,<createdBy, varchar(100),>)
@@ -141,7 +159,12 @@ FROM #t	t
 	WHERE site = 'withdrew'
 
 	
-PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ ' row(s) updated.'
+PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ 'Study 101 row(s) updated.'
+
+--*************************************************
+--**INSERT Statement into ITMIDW table-- 102**************
+--*************************************************
+
 
 INSERT INTO  [ITMIDW].[tblSubjectWithDrawal]
            ([subjectID]
@@ -155,7 +178,7 @@ sub.subjectID
  --,<subjectWithReason, varchar(100),>
 , CASE WHEN LEN(wdoth) =  0 THEN site ELSE wdoth END AS withReason
  --,<SourceSystemID, int,>
-, 13
+, (SELECT ss.sourceSystemID FROM itmidw.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'DIFZ')  
  --,<createdDate, datetime,>
 , GETDATE()
  --,<createdBy, varchar(100),>)
@@ -165,9 +188,7 @@ FROM #t	t
 		ON t.subject =  sub.subjectID
 WHERE site <> 'withdrew'
 
-PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ ' row(s) updated.'
-	
-
+PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ 'Study 102 row(s) updated.'
 
 END
 GO
