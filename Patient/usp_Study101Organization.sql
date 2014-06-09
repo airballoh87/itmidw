@@ -8,7 +8,6 @@ Team Name : Informatics
 Object name : [usp_Study101Organization]
 Functional : ITMI SSIS for Insert and Update for study 102 tblOrganization
  Which is attaching subjects to other entities, including family, original site WHERE the subject wAS enrolled.
- --obscure date for families - ---Obscure Date
 History : Created ON 3/29/2014
 **************************************************************************
 Date Modified By QC# Purposes
@@ -31,19 +30,19 @@ PRINT CONVERT(CHAR(23), @UpdatedOn, 121) + ' [usp_Study101Organization][' + @@SE
 PRINT 'INSERT [ITMIDW].[usp_Study101Organization]...'
 
 --*************************************
---******************102****************
+--**************--drop temp table******
 --*************************************
---drop table
 IF OBJECT_ID('tempdb..#sourceOrganization') IS NOT NULL
 DROP TABLE #sourceOrganization
-
 
 IF OBJECT_ID('tempdb..#obscureRef') IS NOT NULL
 DROP TABLE #obscureRef
 
 
-
---inserting list of orgnizations for the subjects from study 101 that were entered in study101Subject
+--*************************************--*************************************
+--*************************************--*************************************
+--*************************************--*************************************
+--inserting list of organizations for the subjects from study 101 that were entered in study101Subject
 SELECT  DISTINCT 
    (SELECT orgtype.organizationTypeID FROM itmidw.tblOrganizationType orgType WHERE OrganizationTypeName = 'Family' ) AS [organizationTypeID]
 	, LEFT(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(sub.sourceSystemIDLabel,'NB-101-',''),'M-101-',''),'F-101-',''),'PO-101-',''),'101-',''),'NB-B-',''),'NB-A-',''),'NB-C-',''),3) AS [organizationCode]
@@ -53,18 +52,19 @@ SELECT  DISTINCT
     , 'usp_Study101Organization' AS [createdBy]
 INTO #sourceOrganization	
 FROM itmidw.tblSubject sub
-	INNER JOIN itmidw.tblpersON p
+	INNER JOIN itmidw.tblperson	p
 		ON p.personID = sub.personID
 WHERE p.orgSourceSystemID = (SELECT ss.sourceSystemID FROM itmidw.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'INFOPATH')
 
 	
-
---Slowly changing dimension
+--*************************************
+--Slowly changing dimension--**********
+--*************************************
 MERGE  ITMIDW.[tblOrganization] AS targetOrganization
 USING #sourceOrganizatiON ss
 	ON targetOrganization.organizationCode = ss.organizationCode
 		AND targetOrganization.organizationTypeID = ss.organizationTypeID
-		AND targetOrganization.[orgSourceSystemID] = ss.[orgSourceSystemID] --**addd to gurantee uniqueness
+		AND targetOrganization.[orgSourceSystemID] = ss.[orgSourceSystemID] --**add to guarantee uniqueness
 WHEN MATCHED
 	AND (
 		ss.organizationName <> targetOrganization.organizationName OR
@@ -88,9 +88,6 @@ FROM itmidw.tblOrganization
 WHERE orgSourceSystemID =(SELECT ss.sourceSystemID FROM itmidw.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'InfoPath') and 
 organizationTypeID = (SELECT organizationTypeID FROM itmidw.tblOrganizationType WHERE organizationTypeName = 'Family')
 AND itmiFamilyCode IS NULL
-
-
-
 
 END
 
