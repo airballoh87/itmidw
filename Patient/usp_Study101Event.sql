@@ -26,6 +26,8 @@ DECLARE @UpdatedOn SMALLDATETIME
 SET @UpdatedOn = CAST(GETDATE() AS SMALLDATETIME)
 PRINT CONVERT(CHAR(23), @UpdatedOn, 121) + ' [usp_Study101Event][' + @@SERVERNAME + '][' + SYSTEM_USER + ']'
 PRINT 'INSERT [ITMIDW].itmidw.[usp_Study101Event]...'
+
+--Remarking out the import because the 101 data is stagnant, and this only needs to occur on the initial load
 /*
 IF OBJECT_ID('tempdb..#DiagInsert') IS NOT NULL
 DROP TABLE #DiagInsert 
