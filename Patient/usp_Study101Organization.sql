@@ -91,6 +91,7 @@ AND itmiFamilyCode IS NULL
 
 
 ---Obscure Date
+--** doing this for family Unit for study 101, the obscure date will be the ate of deliver of the first studies proband in the trio
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ ' row(s) updated.'
 
