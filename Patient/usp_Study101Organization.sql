@@ -41,18 +41,9 @@ DROP TABLE #sourceOrganization
 IF OBJECT_ID('tempdb..#obscureRef') IS NOT NULL
 DROP TABLE #obscureRef
 
---one time org list for sites
---INSERT INTO [dbo].[tblOrganization]([organizatiONID],[organizationTypeID],[organizationCode],[organizationName],[orgSourceSystemID],[createDate],[createdBy])SELECT 1,1,'1','Niederhuber (ATC)',0,GETDATE(),'TSQL Import: adb'
---INSERT INTO [dbo].[tblOrganization]([organizatiONID],[organizationTypeID],[organizationCode],[organizationName],[orgSourceSystemID],[createDate],[createdBy])SELECT 2,1,'2','Niederhuber (Andersen)',0,GETDATE(),'TSQL Import: adb'
---INSERT INTO [dbo].[tblOrganization]([organizatiONID],[organizationTypeID],[organizationCode],[organizationName],[orgSourceSystemID],[createDate],[createdBy])SELECT 3,1,'3','Niederhuber (Khoury)',0,GETDATE(),'TSQL Import: adb'
---INSERT INTO [dbo].[tblOrganization]([organizatiONID],[organizationTypeID],[organizationCode],[organizationName],[orgSourceSystemID],[createDate],[createdBy])SELECT 4,1,'4','Niederhuber (Maser)',0,GETDATE(),'TSQL Import: adb'
---INSERT INTO [dbo].[tblOrganization]([organizatiONID],[organizationTypeID],[organizationCode],[organizationName],[orgSourceSystemID],[createDate],[createdBy])SELECT 6,1,'6','Niederhuber (Inova Fairfax Hospital)',0,GETDATE(),'TSQL Import: adb'
---INSERT INTO [dbo].[tblOrganization]([organizatiONID],[organizationTypeID],[organizationCode],[organizationName],[orgSourceSystemID],[createDate],[createdBy])SELECT 7,1,'7','Niederhuber (Wolf)',0,GETDATE(),'TSQL Import: adb'
---INSERT INTO [dbo].[tblOrganization]([organizatiONID],[organizationTypeID],[organizationCode],[organizationName],[orgSourceSystemID],[createDate],[createdBy])SELECT 8,1,'8','Niederhuber (Inova OB Clinic)',0,GETDATE(),'TSQL Import: adb'
 
 
-
-
+--inserting list of orgnizations for the subjects from study 101 that were entered in study101Subject
 SELECT  DISTINCT 
    (SELECT orgtype.organizationTypeID FROM itmidw.tblOrganizationType orgType WHERE OrganizationTypeName = 'Family' ) AS [organizationTypeID]
 	, LEFT(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(sub.sourceSystemIDLabel,'NB-101-',''),'M-101-',''),'F-101-',''),'PO-101-',''),'101-',''),'NB-B-',''),'NB-A-',''),'NB-C-',''),3) AS [organizationCode]
@@ -73,6 +64,7 @@ MERGE  ITMIDW.[tblOrganization] AS targetOrganization
 USING #sourceOrganizatiON ss
 	ON targetOrganization.organizationCode = ss.organizationCode
 		AND targetOrganization.organizationTypeID = ss.organizationTypeID
+		AND targetOrganization.[orgSourceSystemID] = ss.[orgSourceSystemID] --**addd to gurantee uniqueness
 WHEN MATCHED
 	AND (
 		ss.organizationName <> targetOrganization.organizationName OR
