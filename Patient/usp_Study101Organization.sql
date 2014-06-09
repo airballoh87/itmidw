@@ -90,29 +90,7 @@ organizationTypeID = (SELECT organizationTypeID FROM itmidw.tblOrganizationType 
 AND itmiFamilyCode IS NULL
 
 
----Obscure Date
---** doing this for family Unit for study 101, the obscure date will be the ate of deliver of the first studies proband in the trio
 
-PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ ' row(s) updated.'
-
-Select cfrA.fieldValue as obscureDate,sub.subjectID, sub.sourceSystemIDLabel
-into #obscureRef
-from itmidw.tblCrfEventAnswers cfrA
-	inner join itmidw.tblsubject sub
-		on sub.subjectID = cfra.subjectID
-Where sub.studyID =1
-	and sub.cohortRole = 'Mother'
-	and cfrA.sourceSystemFieldDataLabel = 'Date and Time of Delivery'
-
-
-UPDATE itmidw.itmi.tblOrganization  SET itmiZeroDateForObfuscation = ref.obscureDate
-FROM itmidw.itmi.tblOrganization  org
-	INNER JOIN itmidw.tblSubjectOrganizationMap map
-		ON Map.organizationID  = org.organizationID
-	INNER JOIN #obscureRef ref
-		ON ref.SubjectID = map.subjectID
-
-PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ 'obscure date row(s) updated.'
 
 END
 
