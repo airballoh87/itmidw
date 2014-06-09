@@ -53,8 +53,8 @@ SELECT
 	, GETDATE()
 	, 'usp_Study101Event'  
 	, sub.subjectID
-FROM  itmistaging.[spoint101].[EDC101Father] a --UNION ALL
-	INNER JOIN tblsubject sub
+FROM  [spoint101].[EDC101Father] a --UNION ALL
+	INNER JOIN itmidw.tblsubject sub
 		ON sub.sourceSystemSubjectID = [Fathers Study ID]
 
 INSERT INTO itmidw.[tblEvent]([sourceSystemEventID],[eventType],[eventName],[studyID],[orgSourceSystemID],[createDate],[createdBy], SubjectID)
@@ -65,8 +65,8 @@ SELECT
 	, (SELECT ss.sourceSystemID FROM itmidw.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'INFOPATH') AS orgSourceSystemID
 	, GETDATE(), 
 'usp_Study101Event'  ,sub.subjectID
-FROM  itmistaging.[spoint101].[EDC101Mother] a --UNION ALL
-	INNER JOIN tblsubject sub
+FROM  [spoint101].[EDC101Mother] a --UNION ALL
+	INNER JOIN itmidw.tblsubject sub
 		ON sub.sourceSystemSubjectID = [Mothers Study ID]
 
 INSERT INTO itmidw.[tblEvent]([sourceSystemEventID],[eventType],[eventName],[studyID],[orgSourceSystemID],[createDate],[createdBy], SubjectID)
@@ -79,8 +79,8 @@ SELECT
 	, GETDATE()
 	, 'usp_Study101Event'  
 	,sub.subjectID
-FROM  itmistaging.[spoint101].[EDC101NEWBORN] a --UNION ALL
-	INNER JOIN tblsubject sub
+FROM  [spoint101].[EDC101NEWBORN] a --UNION ALL
+	INNER JOIN itmidw.tblsubject sub
 		ON sub.sourceSystemSubjectID = [Infants Study ID]
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ ' row(s) updated.'
