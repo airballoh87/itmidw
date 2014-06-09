@@ -24,37 +24,37 @@ TRUNCATE TABLE itmidw.tblSubjectDataSet
 
 
 -102
--subjects
+--subjects
 exec itmidw.usp_Study102Subject
 
--people
+--people
 
 exec itmidw.[usp_Study102Person]
 
--Prep
+--Prep
 exec [itmidw].[usp_Study102Prep]
 
--subjects more
+--subjects more
 EXEC [itmidw].[usp_Study102SubjectIdentifier]
 EXEC [itmidw].[usp_Study102Organization]
 EXEC itmidw.[usp_Study102OrganizationMap]
 exec [itmidw].[usp_Study102SubjectDataset]
 
--Events
+--Events
 exec itmidw.usp_Study102Event
 
--crf data
--exec usp_Study102Crf
+--crf data
+exec usp_Study102Crf
 exec itmidw.[usp_Study102CrfEvent]
 exec itmidw.[usp_Study102CrfEventAnswers]
--UPDATE itmidw.tblCrfEventAnswers SET [crfTranslationFieldID] = NULL
+--UPDATE itmidw.tblCrfEventAnswers SET [crfTranslationFieldID] = NULL
 exec itmidw.[usp_Study102CrfTranslationField]
 exec itmidw.[usp_Study102CrfTranslationFieldOptions]
 
--specimens
+--specimens
 exec itmidw.[usp_Study102Specimen_SpecimenFamily]
 
--exec 101
+--exec 101
 
 exec itmidw.[usp_Study101Subject]
 exec itmidw.usp_Study101SubjectIdentifier
@@ -66,20 +66,20 @@ EXEC itmidw.usp_Study101OrganizationMap
 EXEC itmidw.usp_Study101SubjectDataset
 
 -events
-exec itmidw.[usp_Study101Event]
+exec itmidw.[usp_Study101Event]---**
 
--crf
+--crf
 exec usp_Study101Crf
-exec itmidw.[usp_Study101CrfEvent]
-exec itmidw.[usp_Study101CrfEventAnswers]
+exec itmidw.[usp_Study101CrfEvent]---**
+exec itmidw.[usp_Study101CrfEventAnswers]---**
 exec itmidw.[usp_Study101CrfTranslationField]
 EXEC itmidw.[usp_Study101CrfTranslationFieldOptions]
 
 
--specimen
+--specimen
 exec itmidw.[usp_Study101Specimen_SpecimenFamily]
 
--All Studies
+--All Studies
 
 exec itmidw.[usp_AllStudiesFile]
 exec [itmidw].[usp_AllStudySubjectWithdrawal]
@@ -87,10 +87,10 @@ exec [itmidw].[usp_AllStudyCrfDataDictionary]
 exec [itmidw].[usp_AllStudyCrfDataDictionaryValues]
 exec [itmidw].[usp_AllStudyCrfAnswersForAnalysis]
 
--analysis
--datadictionary
+--analysis
+--datadictionary
 
--crfValuesforAnalysis
+--crfValuesforAnalysis
 
 
 SELECT COUNT(*) as subjects FROM  itmidw.tblsubject

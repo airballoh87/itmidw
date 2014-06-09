@@ -1,0 +1,7 @@
+----PULL----
+git pull https://github.com/airballoh87/itmidw master
+
+----PUSH----
+git add .
+git commit -m "type your commit message here"
+git push origin master

@@ -1,6 +1,6 @@
 
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[itmi].[usp_Study101OrganizationMap]') AND type in (N'P', N'PC'))
-DROP PROCEDURE [itmi].[usp_Study101OrganizationMap]
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[itmidw].[usp_Study101OrganizationMap]') AND type in (N'P', N'PC'))
+DROP PROCEDURE [itmidw].[usp_Study101OrganizationMap]
 GO	
 /**************************************************************************
 Created On : 4/1/2014
@@ -46,7 +46,7 @@ INSERT INTO itmidw.[tblSubjectOrganizationMap]([subjectID],[organizationID],orga
 SELECT DISTINCT sub.subjectID, org.[organizationID],oType.organizationTypeName
 FROM itmidw.tblsubject sub
 	INNER JOIN itmidw.[tblOrganization] org
-		ON org.organizationCode = REPLACE(REPLACE(REPLACE(REPLACE(sub.sourceSystemIDLabel,'NB-101-',''),'M-101-',''),'F-101-',''),'PO-101-','')
+		ON org.organizationCode = REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(sub.sourceSystemIDLabel,'NB-101-',''),'M-101-',''),'F-101-',''),'PO-101-',''),'NB-B-101-',''),'NB-A-101-',''),'NB-C-101-','')
 	INNER JOIN itmidw.tblOrganizationType oType
 		ON oType.organizationTypeID = org.organizationTypeID
 	INNER JOIN itmidw.tblperson p
