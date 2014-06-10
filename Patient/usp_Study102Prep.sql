@@ -16,58 +16,18 @@ SET @UpdatedON = CAST(GETDATE() AS SMALLDATETIME)
 PRINT CONVERT(CHAR(23), @UpdatedOn, 121) + ' [usp_Study102Prep][' + @@SERVERNAME + '][' + SYSTEM_USER + ']'
 PRINT 'INSERT [ITMIDW].[dbo].[usp_Study102Prep]...'
 
---/*
---**************************************************************************
---drop table
+
+--*****************************************
+--drop table--*****************************
+--*****************************************
 IF OBJECT_ID('tempdb..#metaForm') IS NOT NULL
 DROP TABLE #metaForm  
 
-BEGIN
-IF EXISTS(SELECT * FROM itmistaging.sys.columns c
-				INNER JOIN  itmistaging.sys.objects o
-					ON o.object_id = c.object_id
-            WHERE c.Name = 'itmidwSubjectID' and o.name ='PatientDataPointDetail')
-ALTER TABLE difzDBCopy.PatientDataPointDetail DROP COLUMN  itmidwSubjectID 
-
-IF EXISTS(SELECT * FROM itmistaging.sys.columns c
-				INNER JOIN  itmistaging.sys.objects o
-					ON o.object_id = c.object_id
-            WHERE c.Name = 'itmiFormName' and o.name ='PatientDataPointDetail')
-ALTER TABLE difzDBCopy.PatientDataPointDetail DROP COLUMN  itmiFormName 
-
-IF EXISTS(SELECT * FROM itmistaging.sys.columns c
-				INNER JOIN  itmistaging.sys.objects o
-					ON o.object_id = c.object_id
-            WHERE c.Name = 'itmiFieldName' and o.name ='PatientDataPointDetail')
-ALTER TABLE difzDBcopy.PatientDataPointDetail DROP COLUMN  itmiFieldName 
-
-
-IF EXISTS(SELECT * FROM itmistaging.sys.columns c
-				INNER JOIN  itmistaging.sys.objects o
-					ON o.object_id = c.object_id
-            WHERE c.Name = 'itmiFieldValue' and o.name ='PatientDataPointDetail')
-ALTER TABLE difzDBcopy.PatientDataPointDetail DROP COLUMN  itmiFieldValue 
-
-IF EXISTS(SELECT * FROM itmistaging.sys.columns c
-				INNER JOIN  itmistaging.sys.objects o
-					ON o.object_id = c.object_id
-            WHERE c.Name = 'itmiFieldID' and o.name ='PatientDataPointDetail')
-ALTER TABLE difzDBcopy.PatientDataPointDetail DROP COLUMN  itmiFieldID
-END
-
-
-
-ALTER TABLE difzDBcopy.PatientDataPointDetail ADD itmidwSubjectID INT
-ALTER TABLE difzDBcopy.PatientDataPointDetail ADD itmiFormName VARCHAR(100)
-ALTER TABLE difzDBcopy.PatientDataPointDetail ADD itmiFieldName VARCHAR(100)
-ALTER TABLE difzDBcopy.PatientDataPointDetail ADD itmiFieldValue VARCHAR(100)
-ALTER TABLE difzDBcopy.PatientDataPointDetail ADD itmiFieldID VARCHAR(100)
-
---*/
-
---Temp table creatiON for form Data
+--*****************************************
+--Temp table creatiON for form Data--******
+--*****************************************
 SELECT 
-	LTRIM(RTRIM(REPLACE(substring(crf.crfName,CHARINDEX(':',crf.crfName)+1,50),': 101','))) as FormName
+	LTRIM(RTRIM(REPLACE(substring(crf.crfName,CHARINDEX(':',crf.crfName)+1,50),': 101',''))) as FormName
 	, LTRIM(RTRIM(field.fieldname)) as FieldName
 	, field.fieldDescription
 	, field.fieldID
@@ -77,15 +37,17 @@ FROM itmidw.tblcrffields  field
 		ON vers.crfVersionID = field.crfVersionID
 	INNER JOIN itmidw.tblcrf crf
 		ON crf.crfID = vers.crfID
-WHERE field.fieldname <> '
-	and vers.orgSourceSystemID = (SELECT ss.sourceSystemID FROM itmidw.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'DIFZ')
+WHERE field.fieldname <> ''
+	AND vers.orgSourceSystemID = (SELECT ss.sourceSystemID FROM itmidw.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'DIFZ')
 
-
+--*****************************************
+--************itmidwSubjectID**************
+--*****************************************
 UPDATE difzDBcopy.PatientDataPointDetail SET itmidwSubjectID = subject.subjectID
 	FROM difzDBcopy.PatientDataPointDetail as deets
 	INNER JOIN #metaForm mf
 		ON MF.fieldName = deets.fieldName
-			and mf.formName = 
+			AND mf.formName = 
 					CASE WHEN CHARINDEX(' -',deets.dataPageName) = 0 THEN deets.datapageName else 
 						LEFT(deets.dataPageName,CHARINDEX(' -',deets.dataPageName)) END 
 	INNER JOIN itmidw.tblSubject subject
@@ -98,7 +60,9 @@ UPDATE difzDBcopy.PatientDataPointDetail SET itmidwSubjectID = subject.subjectID
 			END 
 WHERE deets.isactive = 1	
 
---fORM
+--*****************************************
+--************itmidwform*******************
+--*****************************************
 
 UPDATE difzDBcopy.PatientDataPointDetail   
 	SET itmiFormName = CASE WHEN CHARINDEX(' -',dataPageName) = 0 THEN datapageName else 
@@ -108,9 +72,9 @@ FROM difzDBcopy.PatientDataPointDetail as deets
 		ON subject.subjectId = deets.itmidwSubjectID
 WHERE deets.isactive = 1	
 
---more descriptive fieldName
---itmiFieldName
-
+--*****************************************
+--************--itmiFieldName**************
+--*****************************************
 UPDATE difzDBcopy.PatientDataPointDetail   
 	SET itmiFieldName = MF.fieldDescription
 		, itmiFieldID = mf.fieldID
@@ -123,7 +87,9 @@ FROM #metaForm mf
 WHERE deets.isactive = 1		
 	
 
---coded value update
+--*****************************************
+--***********--coded value update**********
+--*****************************************
 UPDATE difzDBcopy.PatientDataPointDetail   
 	SET itmiFieldValue =  dd.userDataString
 FROM difzDBcopy.PatientDataPointDetail as deets
@@ -132,11 +98,11 @@ FROM difzDBcopy.PatientDataPointDetail as deets
 	INNER JOIN itmidw.tblCrf crf
 		ON crf.crfName = deets.itmiFormName
 	LEFT JOIN itmistaging.[dbo].[Study102Fields] F
-		on f.fieldOID = deets.fieldName
-			and crf.crfShortName = f.formOID
+		ON f.fieldOID = deets.fieldName
+			AND crf.crfShortName = f.formOID
 	INNER JOIN itmistaging.[dbo].[DataDictionaryEntries] dd
 		ON dd.datadictionaryName = f.datadictionaryName 
-			and deets.fieldValue = dd.codedData
+			AND deets.fieldValue = dd.codedData
 WHERE deets.isactive = 1	
 
 END
