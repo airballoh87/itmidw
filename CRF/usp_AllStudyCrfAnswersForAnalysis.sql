@@ -34,11 +34,14 @@ PRINT CONVERT(CHAR(23), @UpdatedOn, 121) + ' [usp_AllStudyCrfAnswersForAnalysis]
 PRINT 'INSERT [ITMIDW].[dbo].[usp_AllStudyCrfAnswersForAnalysis]...'
 
 --*************************************
---******************102****************
+--******************truncation*********
 --*************************************
+--*************************************	
 
 TRUNCATE TABLE  itmidw.[tblCrfAnswersForAnalysis]
-
+--*************************************
+--******************insert*************
+--*************************************
 INSERT INTO itmidw.[tblCrfAnswersForAnalysis]
            (
            [crfEventAnswersID]
@@ -48,19 +51,12 @@ INSERT INTO itmidw.[tblCrfAnswersForAnalysis]
            ,[SubjectID]
 		   ,sourceSystemFieldID)
      SELECT
---(,<crfEventAnswersID, int,>
 	crfA.crfEventAnswersID
---,<crfAnswerPivot, int,>
 	, crfA.eventCrfID
---,<crfQuestion, varchar(100),>
 	, dd.displayName
---,<crfAnswer, varchar(250),>
 	, ISNULL(opt.preferredName,crfa.fieldValue) as crfAnswer
---,<SubjectID, int,>)
 	, crfa.subjectID
---sourceSystemFieldID
 	, crfA.sourceSystemFieldDataID
---SELECT  *
 FROM itmidw.tblCrfEventAnswers crfA
 	INNER JOIN itmidw.tblCrfDataDictionary dd
 		ON crfa.crfDataDictionaryID = dd.crfDataDictionaryID
@@ -75,8 +71,9 @@ WHERE
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ ' row(s) updated.'
 
---****gestational age
---gestational age
+--*************************************
+--**************--****gestational age**
+--*************************************
 ;WITH gestWeeksInfant as (
 SELECT
 	sub.subjectID
@@ -94,16 +91,17 @@ WHERE crfQuestion LIke '%GESTAGEWK%'
 GROUP BY sub.subjectID, cc.sourceSystemFieldID
 )
 
-
+--*************************************
+--*******insert gestational age********
+--*************************************
 INSERT INTO itmidw.[tblCrfAnswersForAnalysis]
-           (
-           [crfEventAnswersID]
-           ,[crfAnswerPivot]
-           ,[crfQuestion]
-           ,[crfAnswer]
-           ,[SubjectID]
-		   ,sourceSystemFieldID)
-
+   (
+   [crfEventAnswersID]
+   ,[crfAnswerPivot]
+   ,[crfQuestion]
+   ,[crfAnswer]
+   ,[SubjectID]
+   ,sourceSystemFieldID)
 SELECT 
 	answerID
 	, subjectID
@@ -112,10 +110,11 @@ SELECT
 	, subjectID
 	, sourceSystemFieldID
 FROM gestWeeksInfant 
-	
 
 
---cleanup
+--*************************************
+--*******Cleanup **********************
+--*************************************
 --All caps
 UPDATE itmidw.[tblCrfAnswersForAnalysis] SET crfAnswer = UPPER(LTRIM(RTRIM(crfAnswer)))
 --true \ false
@@ -125,9 +124,5 @@ UPDATE itmidw.[tblCrfAnswersForAnalysis] SET crfAnswer = 0  WHERE crfAnswer = 'F
 UPDATE itmidw.[tblCrfAnswersForAnalysis] SET crfAnswer = 1  WHERE crfAnswer = 'YES'
 UPDATE itmidw.[tblCrfAnswersForAnalysis] SET crfAnswer = 0  WHERE crfAnswer = 'NO'
 
-
-
-
 END
 
---select * from itmidw.tblCrfDataDictionaryValues
