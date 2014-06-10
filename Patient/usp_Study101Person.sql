@@ -1,99 +1,114 @@
-IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[itmidw].[usp_Study101Person]') AND type in (N'P', N'PC'))
-DROP PROCEDURE itmidw.[usp_Study101Person]
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[itmidw].[usp_Study101PersON]') AND type in (N'P', N'PC'))
+DROP PROCEDURE itmidw.[usp_Study101PersON]
 GO
 /**************************************************************************
-Created On : 3/19/2014
-Created By : Aaron Black
+Created ON : 3/19/2014
+Created By : AarON Black
 Team Name : Informatics
-Object name : [usp_Study101Person]
-Functional : ITMI SSIS for Insert and Update for study 101 person table
-Purpose : Import of study 101 people from data spoint101 schema for Mom, dad and baby
-History : Created on 3/17/2014
+Object name : [usp_Study101PersON]
+FunctiONal : ITMI SSIS for Insert AND Update for study 101 persON table
+Purpose : Import of study 101 people FROM data spoint101 schema for Mom, dad AND baby
+--mom demographics FROM EHR
+History : Created ON 3/17/2014
 **************************************************************************
 Date Modified By QC# Purposes
 **************************************************************************
 #Date #Comment
 **************************************************************************
 USE CASE:
-EXEC [usp_Study101Person]
---testing update and delete
---UPDATE tblPerson set studyID = 5 where sourceSystemIDLabel = 'F-101-066'
---select * from tblPerson where sourceSystemIDLabel = 'F-101-066'
---delete from tblPerson where sourceSystemIDLabel = 'F-101-201'
---select * from tblPerson where sourceSystemIDLabel = 'F-101-201'
+EXEC [usp_Study101PersON]
+--testing update AND delete
+--UPDATE tblPersON set studyID = 5 WHERE sourceSystemIDLabel = 'F-101-066'
+--SELECT * FROM tblPersON WHERE sourceSystemIDLabel = 'F-101-066'
+--delete FROM tblPersON WHERE sourceSystemIDLabel = 'F-101-201'
+--SELECT * FROM tblPersON WHERE sourceSystemIDLabel = 'F-101-201'
 **************************************************************************/
-CREATE PROCEDURE itmidw.[usp_Study101Person]
+CREATE PROCEDURE itmidw.[usp_Study101PersON]
 AS
 BEGIN
 SET NOCOUNT ON;
-DECLARE @UpdatedOn SMALLDATETIME
-SET @UpdatedOn = CAST(GETDATE() AS SMALLDATETIME)
-PRINT CONVERT(CHAR(23), @UpdatedOn, 121) + ' [usp_Study101Person][' + @@SERVERNAME + '][' + SYSTEM_USER + ']'
-PRINT 'INSERT [ITMIDW].[usp_Study101Person]...'
+DECLARE @UpdatedON SMALLDATETIME
+SET @UpdatedON = CAST(GETDATE() AS SMALLDATETIME)
+PRINT CONVERT(CHAR(23), @UpdatedON, 121) + ' [usp_Study101PersON][' + @@SERVERNAME + '][' + SYSTEM_USER + ']'
+PRINT 'INSERT [ITMIDW].[usp_Study101PersON]...'
 
 
 --**************************************************************************
---*******[tblPerson]********DBCC CHECKIDENT('tblPerson', RESEED, 1)*******
+--*******[tblPersON]********DBCC CHECKIDENT('tblPersON', RESEED, 1)*******
 --**************************************************************************
---drop table
-IF OBJECT_ID('tempdb..#sourcePerson') IS NOT NULL
-DROP TABLE #sourcePerson  
+
+--*************************************
+--drop table--*************************
+--*************************************
+
+IF OBJECT_ID('tempdb..#sourcePersON') IS NOT NULL
+DROP TABLE #sourcePersON  
 
 IF OBJECT_ID('tempdb..#subjectDemo') IS NOT NULL
 DROP TABLE #subjectDemo
 
+--*************************************
+--************SELECT FROM tblsubject***
+--*************************************
 SELECT 
-	1 AS PersonTypeID
+	1 AS PersONTypeID
 	, 0 AS deadFlag
 	, 6 AS orgSourceSystemID
 	, GETDATE() AS createDate
-	,  'usp_Study101Person'  AS createdBy
+	,  'usp_Study101PersON'  AS createdBy
 	, tblsubject.subjectID as [orgSourceSystemUniqueID]
-INTO #sourcePerson
+INTO #sourcePersON
 FROM itmidw.tblSubject
-WHERE studyID = (SELECT studyID from tblStudy where studyShortID = '101')
+WHERE studyID = (SELECT studyID FROM tblStudy WHERE studyShortID = '101')
 
+--*************************************
+--***--Slowly Changing dimensiON*******
+--*************************************
 
---Slowly Changing dimension
-MERGE itmidw.[tblPerson] AS targetPerson
-USING #sourcePerson sp
-	ON targetPerson.[orgSourceSystemUniqueID] = sp.[orgSourceSystemUniqueID]
+MERGE itmidw.[tblPersON] AS targetPersON
+USING #sourcePersON sp
+	ON targetPersON.[orgSourceSystemUniqueID] = sp.[orgSourceSystemUniqueID]
+		AND targetPersON.[orgSourceSystemID] = sp.[orgSourceSystemID]
 WHEN MATCHED
 	AND (
-	sp.PersonTypeID <> targetPerson.PersonTypeID OR 
-	sp.deadFlag <> targetPerson.deadFlag OR 
-	sp.orgSourceSystemID <> targetPerson.orgSourceSystemID OR 
-	sp.createDate <> targetPerson.createDate OR 
-	sp.createdBy <> targetPerson.createdBy OR 
-	sp.orgSourceSystemUniqueID <> targetPerson.orgSourceSystemUniqueID
+	sp.PersONTypeID <> targetPersON.PersONTypeID OR 
+	sp.deadFlag <> targetPersON.deadFlag OR 
+	sp.createDate <> targetPersON.createDate OR 
+	sp.createdBy <> targetPersON.createdBy OR 
+	sp.orgSourceSystemUniqueID <> targetPersON.orgSourceSystemUniqueID
 	)
 THEN UPDATE SET
-	PersonTypeID = sp.PersonTypeID
+	PersONTypeID = sp.PersONTypeID
 	, deadFlag = sp.deadFlag
-	, orgSourceSystemID = sp.orgSourceSystemID
 	, createDate = sp.createDate
 	, createdBy = sp.createdBy
 	, orgSourceSystemUniqueID = sp.orgSourceSystemUniqueID
 WHEN NOT MATCHED THEN
 
-INSERT ([personTypeID],[deadFlag],[orgSourceSystemID] ,[createDate],[createdBy] ,[orgSourceSystemUniqueID])
-VALUES ([personTypeID],[deadFlag],[orgSourceSystemID],[createDate],[createdBy] ,[orgSourceSystemUniqueID]);
+INSERT ([persONTypeID],[deadFlag],[orgSourceSystemID] ,[createDate],[createdBy] ,[orgSourceSystemUniqueID])
+VALUES ([persONTypeID],[deadFlag],[orgSourceSystemID],[createDate],[createdBy] ,[orgSourceSystemUniqueID]);
 
 
---update back to Subject
-UPDATE itmidw.tblSubject set personID = person.personID
+--*************************************
+--***--update back to Subject**********
+--*************************************
+
+UPDATE itmidw.tblSubject set persONID = persON.persONID
 FROM itmidw.tblSubject subject
-	INNER JOIN itmidw.tblperson person
-		on person.[orgSourceSystemUniqueID] = subject.subjectID
-where subject.orgSourceSystemID =  (SELECT ss.sourceSystemID FROM itmidw.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'INFOPATH') 
+	INNER JOIN itmidw.tblpersON persON
+		ON persON.[orgSourceSystemUniqueID] = subject.subjectID
+WHERE subject.orgSourceSystemID =  (SELECT ss.sourceSystemID FROM itmidw.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'INFOPATH') 
 
---Epic Demographics
 
---****************
---**[epicMOMDemo]
---****************
---put in temp table
-select 
+--*************************************
+--***epic demographics*****************
+--*************************************
+
+--****************--****************
+--**[epicMOMDemo] temp table--******
+--****************--****************
+
+SELECT 
 	sub.sourceSystemIDLabel
 	, LAST_NAME
 	, FIRST_NAME
@@ -104,16 +119,19 @@ select
 	, mrn
 	, sub.subjectID
 INTO #subjectDemo
-from epic.[epicMOMDemo] demo
+FROM epic.[epicMOMDemo] demo
 	INNER join itmidw.tblSubjectIdentifer id
-		on id.subjectIdentifier = CONVERT(varchar(100),demo.mrn)
-			and id.subjectIdentifierType = 'MRN'
+		ON id.subjectIdentifier = CONVERT(varchar(100),demo.mrn)
+			AND id.subjectIdentifierType = 'MRN'
 	INNER join itmidw.tblsubject sub
-		on sub.subjectID = id.subjectID
-where demo.matchSubjectID is null
+		ON sub.subjectID = id.subjectID
+WHERE demo.matchSubjectID is null
 
---update table person
-UPDATE itmidw.tblperson SET 
+--****************--****************
+--update table persON--*************
+--****************--****************
+
+UPDATE itmidw.tblpersON SET 
 	mrn = sb.mrn
 	, raceCode = sb.race
 	, ethnicityCode = sb.ETHNIC_GROUP
@@ -121,11 +139,11 @@ UPDATE itmidw.tblperson SET
 	, zip = sb.zip
 	, lastName = sb.LAST_NAME
 	, firstName =sb.FIRST_NAME
-from itmidw.tblPerson person
+FROM itmidw.tblPersON persON
 	INNER JOIN itmidw.tblsubject sub
-		on sub.personID = person.personID
+		ON sub.persONID = persON.persONID
 	INNER JOIN #subjectDemo sb
-		on sb.SubjectID = sub.subjectID
+		ON sb.SubjectID = sub.subjectID
 
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ ' row(s) updated.'
