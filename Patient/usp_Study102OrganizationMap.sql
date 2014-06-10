@@ -31,15 +31,16 @@ PRINT CONVERT(CHAR(23), @UpdatedOn, 121) + ' [usp_Study102OrganizationMap][' + @
 PRINT 'INSERT [ITMIDW].[itmidw].[usp_Study102OrganizationMap]...'
 
 --*************************************
---******************102****************
+--************--drop table*************
 --*************************************
---drop table
 IF OBJECT_ID('tempdb..#sourceOrganization') IS NOT NULL
 DROP TABLE #sourceOrganization
 
 
 
---Family
+--*************************************
+--************--family*****************
+--*************************************
 SELECT DISTINCT
 		   sub.subjectID AS [subjectID]
            , org.organizationID AS [organizationID]
@@ -54,7 +55,9 @@ INTO #sourceOrganization
 			ON CONVERT(VARCHAR(100),org.organizationCode) = CONVERT(VARCHAR(100),subject.subjectID)
 	WHERE subject.isActive = 1
 		
---Organization
+--*************************************
+--************--organization***********
+--*************************************
 INSERT INTO #sourceOrganizatiON ([subjectID], [organizationID], [organizationTypeName])
 	SELECT 
 		   sub.subjectID AS [subjectID]
@@ -74,9 +77,9 @@ INSERT INTO #sourceOrganizatiON ([subjectID], [organizationID], [organizationTyp
 	WHERE subject.isActive = 1
 		
 
-
---Slowly changing dimension
-
+--*************************************
+--********--Slowly changing dimension**
+--*************************************
 INSERT INTO ITMIDW.[tblSubjectOrganizationMap] ([subjectID],[organizationID],[organizationTypeName])
 SELECT 
 	ss.[subjectID]
