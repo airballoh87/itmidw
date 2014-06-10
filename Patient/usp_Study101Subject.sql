@@ -39,6 +39,9 @@ PRINT 'INSERT [ITMIDW].itmidw..[usp_Study101Subject]...'
 IF OBJECT_ID('tempdb..#sourceSubject') IS NOT NULL
 DROP TABLE #sourceSubject  
 
+--**********************************************
+--*******sharepoint data into temp table********
+--**********************************************
 
 SELECT DISTINCT [sourceSystemSubjectID],[sourceSystemIDLabel],[studyID], [cohortRole], [personID],[orgSourceSystemID],[createDate],[createdBy]
 INTO #sourceSubject
@@ -55,7 +58,8 @@ FROM (
 		, 'usp_Study101Subject'  AS createdBy
 		FROM  [spoint101].[EDC101Father] a
 			WHERE ISNULL(a.[Fathers Study ID],'' ) <> '' 
-				AND LEFT(a.[Fathers Study ID],1) = 'F' UNION ALL
+				AND LEFT(a.[Fathers Study ID],1) = 'F' 
+UNION ALL
 	SELECT DISTINCT
 		a.[Mothers Study ID] AS sourceSystemSubjectID
 		, a.[Mothers Study ID] AS sourceSystemIDLabel
@@ -66,7 +70,8 @@ FROM (
 		, GETDATE() AS CreateDate
 		, 'usp_Study101Subject'  AS createdBy
 		FROM [spoint101].[EDC101Mother] a 
-			WHERE ISNULL(a.[Mothers Study ID],'') <> '' UNION ALL
+			WHERE ISNULL(a.[Mothers Study ID],'') <> '' 
+UNION ALL
 	SELECT 
 		a.[Infants Study ID] AS sourceSystemSubjectID
 		, a.[Infants Study ID] AS sourceSystemIDLabel
@@ -93,7 +98,9 @@ FROM (
 				AND LEFT(a.[Fathers Study ID],2) = 'PO' 
 	) AS B
 
---********Withdrawals -- from Spreadsheet extract
+--*************************************--*************************************
+--********Withdrawals -- from Spreadsheet extract--***************************
+--*************************************--*************************************
 
 INSERT INTO #sourceSubject (sourceSystemSubjectID,sourceSystemIDLabel, studyId, cohortRole, orgSourceSystemID, createDate, createdBy)
 SELECT	'M-101-038',	'M-101-038',	1, 'Mother',6,GETDATE(), 'usp_Study101Subject' UNION ALL
@@ -151,8 +158,10 @@ SELECT	'M-101-189',	'M-101-189',	1, 'Mother',6,GETDATE(), 'usp_Study101Subject' 
 SELECT	'M-101-120',	'M-101-120',	1, 'Mother',6,GETDATE(), 'usp_Study101Subject' UNION ALL
 SELECT	'M-101-074',	'M-101-074',	1, 'Mother',6,GETDATE(), 'usp_Study101Subject' 
 
+--*************************************
+--Slowly Changing dimension--**********
+--*************************************
 
---Slowly Changing dimension
 MERGE  ITMIDW.[tblSubject] AS targetSubject
 USING #sourceSubject ss
 	ON targetSubject.[sourceSystemSubjectID] = ss.[sourceSystemSubjectID]
