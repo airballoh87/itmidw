@@ -22,7 +22,7 @@ USE CASE:
 EXEC [usp_Study101Prep]
 --testing update and delete
 **************************************************************************/
-CREATE PROCEDURE [dbo].[usp_Study101Prep]
+CREATE PROCEDURE [ITMIDW].[usp_Study101Prep]
 AS
 BEGIN
 
