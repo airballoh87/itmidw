@@ -39,6 +39,10 @@ PRINT 'INSERT [ITMIDW].[dbo].[usp_Study102Person]...'
 IF OBJECT_ID('tempdb..#sourcePerson') IS NOT NULL
 DROP TABLE #sourcePersON  
 
+
+--*************************************
+--*******insert into temp table********
+--*************************************
 SELECT 
 	1 AS PersonTypeID
 	, 0 AS deadFlag
@@ -50,11 +54,13 @@ INTO #sourcePerson
 FROM itmidw.tblSubject
 WHERE studyID = (SELECT studyID FROM itmidw.tblStudy WHERE studyShortID = '102')
 
-
---Slowly Changing dimension
+--*************************************
+--Slowly Changing dimension--**********
+--*************************************
 MERGE  itmidw.[tblPerson] AS targetPerson
 USING #sourcePersON sp
 	ON targetPerson.[orgSourceSystemUniqueID] = sp.[orgSourceSystemUniqueID]
+		AND targetPerson.orgSourceSystemID <> sp.orgSourceSystemID 
 WHEN MATCHED
 	AND (
 	sp.PersonTypeID <> targetPerson.PersonTypeID OR 
@@ -76,9 +82,10 @@ WHEN NOT MATCHED THEN
 INSERT ([personTypeID],[deadFlag],[orgSourceSystemID] ,[createDate],[createdBy] ,[orgSourceSystemUniqueID])
 VALUES ([personTypeID],[deadFlag],[orgSourceSystemID],[createDate],[createdBy] ,[orgSourceSystemUniqueID]);
 
-
---update back to Subject
-UPDATE itmidw.tblSubject set personID = person.personID
+--*************************************
+--update back to Subject--*************
+--*************************************
+UPDATE itmidw.tblSubject SET personID = person.personID
 FROM itmidw.tblSubject subject
 	INNER JOIN itmidw.tblpersON person
 		ON person.[orgSourceSystemUniqueID] = subject.subjectID
