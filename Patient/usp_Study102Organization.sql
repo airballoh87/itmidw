@@ -17,11 +17,11 @@ Date Modified By QC# Purposes
 USE CASE:
 EXEC [usp_Study102Organization]
 --TRUNCATe table itmidw.[tblOrganization] 
---select * FROM itmidw.[tblOrganization] 
+--SELECT * FROM itmidw.[tblOrganization] 
 update itmidw.[tblSubjectIdentifer]   set subjectIdentifier  = 'memaw' WHERE subjectID = 6626
-select * FROM itmidw.[tblSubjectIdentifer]  WHERE subjectID = 6626
+SELECT * FROM itmidw.[tblSubjectIdentifer]  WHERE subjectID = 6626
 delete FROM itmidw.[tblSubjectIdentifer]  WHERE subjectID = 6621
-select * FROM itmidw.[tblSubjectIdentifer]  WHERE subjectID = 6621
+SELECT * FROM itmidw.[tblSubjectIdentifer]  WHERE subjectID = 6621
 **************************************************************************/
 CREATE PROCEDURE itmidw.[usp_Study102Organization]
 AS
@@ -33,18 +33,21 @@ PRINT CONVERT(CHAR(23), @UpdatedOn, 121) + ' [usp_Study102Organization][' + @@SE
 PRINT 'INSERT [ITMIDW].itmidw.[usp_Study102Organization]...'
 
 --*************************************
---******************102****************
+--***************--drop table**********
 --*************************************
---drop table
 IF OBJECT_ID('tempdb..#sourceOrganization') IS NOT NULL
 DROP TABLE #sourceOrganization
 
 IF OBJECT_ID('tempdb..#tempParent') IS NOT NULL
 DROP TABLE #tempParent
---Family ID - ITMI Specific
 
+
+
+--*************************************
+--*******--Family ID - ITMI Specific***
+--*************************************
 SELECT DISTINCT
-           (select orgtype.organizationTypeID FROM itmidw.tblOrganizationType orgType WHERE OrganizationTypeName = 'Family' ) AS [organizationTypeID]
+           (SELECT orgtype.organizationTypeID FROM itmidw.tblOrganizationType orgType WHERE OrganizationTypeName = 'Family' ) AS [organizationTypeID]
            , CONVERT(VARCHAR(100),subject.SubjectID) AS [organizationCode]
            , subject.subjectNumber AS [organizationName]
 		   , CONVERT(varchar(100),NULL) AS organizationParentID
@@ -55,10 +58,13 @@ INTO #sourceOrganization
 	FROM difzDBcopy.Subject subject
 		WHERE subject.isActive = 1
 		
---Organization
+
+--*************************************
+--*******--Organization****************
+--*************************************
 INSERT INTO #sourceOrganizatiON ([organizationTypeID], [organizationCode], [organizationName],organizationParentID,[orgSourceSystemID],[createDate],[createdBy])
 SELECT DISTINCT
-           (select orgtype.organizationTypeID FROM itmidw.tblOrganizationType orgType WHERE OrganizationTypeName = 'Clinical Site' ) AS [organizationTypeID]
+           (SELECT orgtype.organizationTypeID FROM itmidw.tblOrganizationType orgType WHERE OrganizationTypeName = 'Clinical Site' ) AS [organizationTypeID]
            , ISNULL(CONVERT(varchar(50),org.siteIdentifier), CONVERT(varchar(50),org.organizationID)) AS [organizationCode]
            , org.organizationName AS [organizationName]
 		   , org.partOfOrganizationID  AS organizationParentID
@@ -69,22 +75,22 @@ SELECT DISTINCT
 	WHERE org.isactive = 1
 
 
-
---Slowly changing dimension
+--*************************************
+--***--Slowly changing dimension*******
+--*************************************
 MERGE  itmidw.[tblOrganization] AS targetOrganization
 USING #sourceOrganizatiON ss
 	ON targetOrganization.organizationCode = ss.organizationCode
 		AND targetOrganization.organizationTypeID = ss.organizationTypeID
+		AND targetOrganization.[orgSourceSystemID] = ss.[orgSourceSystemID]
 WHEN MATCHED
 	AND (
 		ss.organizationName <> targetOrganization.organizationName OR
-		ss.[orgSourceSystemID] <> targetOrganization.[orgSourceSystemID] OR  
 		ss.[createDate] <> targetOrganization.[createDate] OR
 		ss.[createdBy] <> targetOrganization.[createdBy] 
 	)
 THEN UPDATE SET
 	 organizationName = ss.organizationName
-	, [orgSourceSystemID] = ss.[orgSourceSystemID]
 	, [createDate] = ss.[createDate] 
 	, [createdBy] = ss.[createdBy] 
 WHEN NOT MATCHED THEN
@@ -93,7 +99,9 @@ INSERT ([organizationTypeID], [organizationCode], [organizationName],[orgSourceS
 VALUES (ss.[organizationTypeID], ss.[organizationCode], ss.[organizationName],ss.[orgSourceSystemID],ss.[createDate],ss.[createdBy]);
 
 
---update parent organization
+--*************************************
+--***--update parent organization******
+--*************************************
 SELECT org.organizationID, parUpdate.organizationID AS ParentID
 INTO #tempParent
 FROM itmidw.tblOrganizatiON org
@@ -103,18 +111,21 @@ FROM itmidw.tblOrganizatiON org
 		ON parent.organizationCode = so.organizationParentID
 	INNER JOIN itmidw.tblOrganizatiON parUpdate
 		ON parUpdate.organizationCode = parent.organizationCode
-WHERE org.organizationTypeID = (select orgtype.organizationTypeID FROM itmidw.tblOrganizationType orgType WHERE OrganizationTypeName = 'Clinical Site' )
+WHERE org.organizationTypeID = (SELECT orgtype.organizationTypeID FROM itmidw.tblOrganizationType orgType WHERE OrganizationTypeName = 'Clinical Site' )
 
 UPDATE itmidw.tblOrganizatiON set organizationParentID = tp.ParentID
 FROM itmidw.tblOrganizatiON org
 	INNER JOIN #tempParent tp
 		ON tp.organizationID = org.organizationID
 
---update familyID
+--*************************************
+--***---update familyID****************
+--*************************************
+
 UPDATE itmidw.tblOrganization SET itmiFamilyCode =  SUBSTRING(organizationName,5,5)
 FROM itmidw.tblOrganization
 WHERE orgSourceSystemID =(SELECT ss.sourceSystemID FROM itmidw.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'DIFZ') 
-	and organizationTypeID = (SELECT organizationTypeID FROM itmidw.tblOrganizationType WHERE organizationTypeName = 'Family')
+	AND organizationTypeID = (SELECT organizationTypeID FROM itmidw.tblOrganizationType WHERE organizationTypeName = 'Family')
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ ' row(s) updated.'
 
