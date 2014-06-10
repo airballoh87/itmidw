@@ -91,16 +91,15 @@ MERGE  ITMIDW.[tblSubjectIdentifer] AS targetSubject
 USING #sourceSubjectIdentifier ss
 	ON targetSubject.subjectID = ss.subjectID
 		AND targetSubject.subjectIdentifierType = ss.subjectIdentifierType
+		AND targetSubject.[orgSourceSystemID] <> ss.[orgSourceSystemID]
 WHEN MATCHED
 	AND (
 		ss.[subjectIdentifier] <> targetSubject.[subjectIdentifier] OR
-		ss.[orgSourceSystemID] <> targetSubject.[orgSourceSystemID] OR  
 		ss.[createDate] <> targetSubject.[createDate] OR
 		ss.[createdBy] <> targetSubject.[createdBy] 
 	)
 THEN UPDATE SET
 	 [subjectIdentifier] = ss.[subjectIdentifier]
-	, [orgSourceSystemID] = ss.[orgSourceSystemID]
 	, [createDate] = ss.[createDate] 
 	, [createdBy] = ss.[createdBy] 
 WHEN NOT MATCHED THEN
