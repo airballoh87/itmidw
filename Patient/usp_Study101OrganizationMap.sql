@@ -42,6 +42,9 @@ WHERE sub.studyID = (select studyid from itmidw.tblstudy where studyShortID = '1
 )
 
 
+--*************************************
+--****************Insert***************
+--*************************************
 INSERT INTO itmidw.[tblSubjectOrganizationMap]([subjectID],[organizationID],organizationTypeName)
 SELECT DISTINCT sub.subjectID, org.[organizationID],oType.organizationTypeName
 FROM itmidw.tblsubject sub
