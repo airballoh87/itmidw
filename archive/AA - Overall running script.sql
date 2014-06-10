@@ -59,13 +59,13 @@ exec itmidw.[usp_Study102Specimen_SpecimenFamily]
 exec itmidw.[usp_Study101Subject]
 exec itmidw.usp_Study101SubjectIdentifier
 
--people
+--people
 exec itmidw.[usp_Study101Person]
 exec itmidw.usp_Study101Organization
 EXEC itmidw.usp_Study101OrganizationMap
 EXEC itmidw.usp_Study101SubjectDataset
 
--events
+--events
 exec itmidw.[usp_Study101Event]---**
 
 --crf
