@@ -968,6 +968,9 @@ FROM dbo.[Study102Fields] F
 		on vers.crfVersionID = crfFields.crfVersionID
 
 
+
+
+
 */
 END
 
