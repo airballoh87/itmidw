@@ -29,35 +29,29 @@ PRINT CONVERT(CHAR(23), @UpdatedOn, 121) + ' [usp_Study102CrfTranslationFieldOpt
 PRINT 'INSERT [ITMIDW].[usp_Study102CrfTranslationFieldOptions]...'
 
 --*************************************
---******************102****************
+--***************Truncate and insert***
 --*************************************
-
-
 
 TRUNCATE TABLE itmidw.[tblCrfTranslationFieldOptions]
 
 
 INSERT INTO itmidw.[tblCrfTranslationFieldOptions]
-           ([CrfTranslationFieldID]
-           ,[FieldValue]
-           ,[CodedData]
-           ,[Ordinal]
-           ,[orgSourceSystemID]
-           ,[createDate]
-           ,[createdBy])
-     SELECT 
-           --(<CrfTranslationFieldID, int,>
+   ([CrfTranslationFieldID]
+   ,[FieldValue]
+   ,[createdBy])
+   ,[CodedData]
+   ,[Ordinal]
+   ,[orgSourceSystemID]
+   ,[createDate]
+SELECT 
 	transF.CrfTranslationFieldID
-           --,<FieldValue, varchar(255),>
 	, fo.optionLabel
-           --,<CodedData, nvarchar(255),>
 	, fo.optionValue
-           --,<Ordinal, nvarchar(255),>
 	, NULL as Ordinal
     ,(SELECT ss.sourceSystemID FROM ITMIDW.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'DIFZ') AS [orgSourceSystemID]
     ,GETDATE() [createDate]
     ,'usp_Study102CrfTranslationFieldOptions' AS [createdBy]
-FROM tblcrfFieldOptions fo
+FROM itmidw.tblcrfFieldOptions fo
 	INNER JOIN itmidw.tblCrfTranslationField transF
 		ON transF.fieldID = fo.fieldID
 	AND fo.orgSourceSystemID  =(SELECT ss.sourceSystemID FROM ITMIDW.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'DIFZ')
