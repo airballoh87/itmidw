@@ -42,10 +42,14 @@ PRINT 'INSERT [ITMIDW].itmidw.[usp_Study101CrfTranslationField]...'
 --******************101****************
 --*************************************
 
+--*************************************
+--*********Delete and restore**********
+--*************************************
+delete FROM ITMIDW.[tblCrfTranslationField] WHERE orgSourceSystemID = 6
 
-delete from ITMIDW.[tblCrfTranslationField] WHERE orgSourceSystemID = 6
-
-
+--*************************************
+--****************INSERT***************
+--*************************************
 INSERT INTO itmidw.[tblCrfTranslationField]
            ([studyID]
            ,[studyName]
@@ -60,20 +64,18 @@ INSERT INTO itmidw.[tblCrfTranslationField]
            ,[createDate]
            ,[createdBy])
 SELECT DISTINCT 
-crfEvent.studyID
-, LEFT(study.studyName,200) as StudyName
-, crfEvent.crfID
-, LEFT(ct.crfTypeName,200) as CrfTypeName
-, LEFT(vers.crfVersionName,200) as CrfVersionName
-, LEFT(ISNULL(f.questionText,f.fieldName),200) as questionText
---
-, NULL AS preferredFieldName
-, crfA.sourceSystemFieldDataID
-, vers.crfVersionID as crfVersionID
-, 6 AS orgSourceSystemID
-, GETDATE() AS createDate
-,'usp_Study101CrfTranslationField' AS createdBy
-
+	crfEvent.studyID
+	, LEFT(study.studyName,200) as StudyName
+	, crfEvent.crfID
+	, LEFT(ct.crfTypeName,200) as CrfTypeName
+	, LEFT(vers.crfVersionName,200) as CrfVersionName
+	, LEFT(ISNULL(f.questionText,f.fieldName),200) as questionText
+	, NULL AS preferredFieldName
+	, crfA.sourceSystemFieldDataID
+	, vers.crfVersionID as crfVersionID
+	, 6 AS orgSourceSystemID
+	, GETDATE() AS createDate
+	,'usp_Study101CrfTranslationField' AS createdBy
 FROM ITMIDW.tblCrfEventAnswers crfA
 	INNER JOIN ITMIDW.tblCrfEvent crfEvent
 		ON crfEvent.crfEventID = crfA.eventCrfID
@@ -91,9 +93,11 @@ WHERE crfA.orgSourceSystemID = 6
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ ' row(s) updated.'
 
---update to tblCrfTranslationField
+--*************************************
+--update to tblCrfTranslationField--***
+--*************************************
 UPDATE itmidw.tblCrfEventAnswers SET [crfTranslationFieldID] = transF.[crfTranslationFieldID]
-	from itmidw.tblCrfEventAnswers crfa
+	FROM itmidw.tblCrfEventAnswers crfa
 	INNER JOIN itmidw.tblCrfEvent crfEvent
 		ON crfEvent.crfEventID = crfA.eventCrfID
 	INNER JOIN itmidw.Tblstudy study
@@ -107,10 +111,10 @@ UPDATE itmidw.tblCrfEventAnswers SET [crfTranslationFieldID] = transF.[crfTransl
 	INNER JOIN itmidw.tblCrfFields f
 		ON f.fieldID = crfA.sourceSystemFieldDataID
 	INNER JOIN itmidw.tblCrfTranslationField transF
-		on transF.crfID = crf.crfID
+		ON transF.crfID = crf.crfID
 			AND sourceSystemFieldDataID = transF.fieldId
-	where crfa.[crfTranslationFieldID] IS NULL
-		and crfa.orgSourceSystemID = 6
+	WHERE crfa.[crfTranslationFieldID] IS NULL
+		AND crfa.orgSourceSystemID = 6
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ ' translationID  row(s) updated.'
 
