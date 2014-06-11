@@ -32,33 +32,30 @@ PRINT 'INSERT [ITMIDW].itmidw.[usp_Study101CrfTranslationFieldOptions]...'
 --******************102****************
 --*************************************
 
-
-
 DELETE FROM itmidw.[tblCrfTranslationFieldOptions] WHERE orgSourceSystemID = (SELECT ss.sourceSystemID FROM ITMIDW.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'INFOPATH')
 
+--*************************************
+--*************Insert *****************
+--*************************************
 
 INSERT INTO itmidw.[tblCrfTranslationFieldOptions]
-           ([CrfTranslationFieldID]
-           ,[FieldValue]
-           ,[CodedData]
-           ,[Ordinal]
-           ,[orgSourceSystemID]
-           ,[createDate]
-           ,[createdBy])
+   ([CrfTranslationFieldID]
+   ,[FieldValue]
+   ,[CodedData]
+   ,[Ordinal]
+   ,[orgSourceSystemID]
+   ,[createDate]
+   ,[createdBy])
 SELECT 
---(<CrfTranslationFieldID, int,>
 	transF.CrfTranslationFieldID
---,<FieldValue, varchar(255),>
-	, fo.optionLabel
---,<CodedData, nvarchar(255),>
-	, fo.optionValue
---,<Ordinal, nvarchar(255),>
-	, NULL as Ordinal
+	,fo.optionLabel
+	,fo.optionValue
+	,NULL AS Ordinal
     ,(SELECT ss.sourceSystemID FROM ITMIDW.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'INFOPATH') AS [orgSourceSystemID]
     ,GETDATE() [createDate]
     ,'usp_Study101CrfTranslationFieldOptions' AS [createdBy]
-FROM tblcrfFieldOptions fo
-	INNER JOIN tblCrfTranslationField transF
+FROM itmidw.tblcrfFieldOptions fo
+	INNER JOIN itmidw.tblCrfTranslationField transF
 		ON transF.fieldID = fo.fieldID
 	WHERE fo.orgSourceSystemID  =(SELECT ss.sourceSystemID FROM ITMIDW.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'INFOPATH')
 
