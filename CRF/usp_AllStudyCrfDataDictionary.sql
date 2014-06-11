@@ -18,11 +18,11 @@ Date Modified By QC# Purposes
 USE CASE:
 EXEC itmidw.usp_AllStudyCrfDataDictionary
 --TRUNCATe table ITMIDW.[tblCrfDataDictionary] 
-select  * FROM ITMIDW.[tblCrfDataDictionary] 
+SELECT* FROM ITMIDW.[tblCrfDataDictionary] 
 PREP
 delete
-from [dbo].[crfFieldsForAnalysis20140522] ana	
-	where ana.[preferred name] IS NULL
+FROM [dbo].[crfFieldsForAnalysis20140522] ana	
+	WHERE ana.[preferred name] IS NULL
 
 **************************************************************************/
 CREATE PROCEDURE ITMIDW.usp_AllStudyCrfDataDictionary
@@ -40,69 +40,76 @@ DROP TABLE #tt
 --*************************************
 --******************102****************
 --*************************************
---update to preferred name for correct aggregation
 
+--*************************************--*************************************
+--update to preferred name for correct aggregation--**************************
+--*************************************--*************************************
 
+--*************************************
+--**********Insert into temp table ****
+--*************************************
 
-
-select  crfa.sourceSystemFieldDataLabel,dd.questionText,crf.crfName
-,MIN(crfa.fieldValue) as minVal
-,MAX(crfa.fieldValue) as maxVal
-,COUNT(*) as cnt
-,SUM(CASE WHEN ISNULL(crfa.fieldValue,'') <>  '' THEN 1 ELSE 0 END) as FilledIn
-,ROUND(((SUM(CASE WHEN ISNULL(crfa.fieldValue,'') <>  '' THEN 1 ELSE 0 END)+0.00)/COUNT(*)+0.00)*100,2) pctFilledIn
-, MIN(distinctValue.cnt) as distinctValue
-, MIN(dd.[crfTranslationFieldID]) as minDDid
-, MAX(dd.[crfTranslationFieldID]) as maxDDid
-into #tt
-from itmidw.tblCrfEventAnswers crfA
-	inner join itmidw.[tblCrfTranslationField] dd
-		on dd.[crfTranslationFieldID] = crfa.[crfTranslationFieldID]
+SELECT 
+	crfa.sourceSystemFieldDataLabel
+	, dd.questionText
+	, crf.crfName
+	, MIN(crfa.fieldValue) AS minVal
+	, MAX(crfa.fieldValue) AS maxVal
+	, COUNT(*) AS cnt
+	, SUM(CASE WHEN ISNULL(crfa.fieldValue,'') <>  '' THEN 1 ELSE 0 END) AS FilledIn
+	, ROUND(((SUM(CASE WHEN ISNULL(crfa.fieldValue,'') <>  '' THEN 1 ELSE 0 END)+0.00)/COUNT(*)+0.00)*100,2) pctFilledIn
+	, MIN(distinctValue.cnt) AS distinctValue
+	, MIN(dd.[crfTranslationFieldID]) AS minDDid
+	, MAX(dd.[crfTranslationFieldID]) AS maxDDid
+INTO #tt
+FROM itmidw.tblCrfEventAnswers crfA
+	INNER JOIN itmidw.[tblCrfTranslationField] dd
+		ON dd.[crfTranslationFieldID] = crfa.[crfTranslationFieldID]
 	INNER JOIN itmidw.Tblcrf crf
-		on crf.crfID = dd.crfID
+		ON crf.crfID = dd.crfID
 	INNER JOIN 
-		(select sourceSystemFieldDataLabel, COUNT(*) as cnt FROM 
+		(select sourceSystemFieldDataLabel, COUNT(*) AS cnt FROM 
 		(
 		SELECT sourceSystemFieldDataLabel,FieldValue FROM itmidw.tblCrfEventAnswers GROUP BY sourceSystemFieldDataLabel,FieldValue
-		) as A GROUP BY sourceSystemFieldDataLabel)   
-			as distinctValue
+		) AS A GROUP BY sourceSystemFieldDataLabel)   
+			AS distinctValue
 		ON distinctValue.sourceSystemFieldDataLabel = crfA.sourceSystemFieldDataLabel
 GROUP BY crfa.sourceSystemFieldDataLabel,dd.questionText,crf.crfName
 
---select * from #tt where sourceSystemFieldDataLabel = 'FPFHGUPUNK'
+
+--*************************************
+--**********Update preferred name  ****
+--*************************************
 
 UPDATE itmidw.[tblCrfTranslationField]  SET [preferredFieldName] =  ana.[preferred Name]
---select t.*
-from [dbo].[crfFieldsForAnalysis20140603] ana	
+FROM [dbo].[crfFieldsForAnalysis20140603] ana	
 	INNER JOIN #tt t
-		on t.crfName = ana.crfname
-		and t.sourceSystemFieldDataLabel = ana.sourceSystemFieldDataLabel
-		and t.questionText = ana.questionText
+		ON t.crfName = ana.crfname
+		AND t.sourceSystemFieldDataLabel = ana.sourceSystemFieldDataLabel
+		AND t.questionText = ana.questionText
 	INNER JOIN itmidw.[tblCrfTranslationField] map
-		on map.crfTranslationFieldID = t.maxDDid
-ORDER BY t.sourceSystemFieldDataLabel
-
+		ON map.crfTranslationFieldID = t.maxDDid
 WHERE t.sourceSystemFieldDataLabel = 'FPFHGUPUNK'
 	
-
-select * FROM itmidw.[tblCrfTranslationField]	where preferredFieldName = 'FPFHGUPUNK'
+--*************************************
+--**********Insert into dd   table ****
+--*************************************
 		
 INSERT INTO ITMIDW.[tblCrfDataDictionary]
-           (
-            [questionText]
-           ,[preferredFieldName]
-		   ,[orgSourceSystemID]
-           ,[createDate]
-           ,[createdBy])
-select  
-	MAX(transF.questionText) as QuestionText
-	, transF.preferredFieldName as preferredName
-   , (SELECT ss.sourceSystemID FROM ITMIDW.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'DIFZ') AS [orgSourceSystemID]
+   (
+	[questionText]
+   ,[preferredFieldName]
+   ,[orgSourceSystemID]
+   ,[createDate]
+   ,[createdBy])
+SELECT
+	MAX(transF.questionText) AS QuestionText
+	, transF.preferredFieldName AS preferredName
+    , (SELECT ss.sourceSystemID FROM ITMIDW.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'DIFZ') AS [orgSourceSystemID]
     , GETDATE() [createDate]
     ,'usp_AllStudyCrfDataDictionary' AS [createdBy]
---select *
 FROM ITMIDW.[tblCrfTranslationField] transF
-	INNER JOIN ITMIDW.tblcrfversion vers
+	INNER JOIN ITMIDW.tblcrfversiON vers
 		ON vers.crfVersionID = transF.crfVersionID
 	INNER JOIN ITMIDW.tblStudy study
 		ON study.studyID = transF.studyID
@@ -114,43 +121,46 @@ WHERE transF.preferredFieldName IS NOT NULL
 	AND dd.crfDataDictionaryID IS NULL --only bringing in new records that are not in DD already
 GROUP BY transF.preferredFieldName
 
---**write update statement and vlookup on translationcode id in excel
-
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+'row(s) updated.'
 
---update data dictionary
---102
+--*************************************
+--update data dictionary--*************
+--*************************************
 UPDATE itmidw.tblCrfEventAnswers set crfDataDictionaryID = dd.[crfDataDictionaryID]
 		FROM itmidw.tblCrfEventAnswers crfA
 	INNER JOIN [itmidw].[tblCrfTranslationField] map
-		on map.crfTranslationFieldID = crfa.CrfTranslationFieldID
+		ON map.crfTranslationFieldID = crfa.CrfTranslationFieldID
 	INNER JOIN itmidw.[tblCrfDataDictionary]  dd
-		on dd.preferredFieldName = map.preferredFieldName
-
-
-
+		ON dd.preferredFieldName = map.preferredFieldName
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+'update to crfDD tblCrfEventAnswers row(s) updated.'
-
---for re-creation purposes only
+--*************************************
+--for re-creatiON purposes only--******
+--*************************************
 UPDATE ITMIDW.[tblCrfDataDictionary] set displayName = 'Subject Race'
-where preferredFieldName = 'RACE';
+WHERE preferredFieldName = 'RACE';
 
+--*************************************
+--**************preferred Name*********
+--*************************************
 UPDATE ITMIDW.[tblCrfDataDictionary] set displayName = preferredFieldName
-where DISPLAYnAME IS NULL
+WHERE DISPLAYnAME IS NULL
 
---study 101 hand procured name
+--*************************************
+--study 101 hAND procured name--*******
+--*************************************
+
 UPDATE itmidw.[tblCrfTranslationField]
 	SET preferredFieldName = 'FPCOUNTRYBRTH'
 FROM ITMIDW.[tblCrfTranslationField] transF
-where questiontext= 'Country of Birth'
-	and crftype = 'Study101 Father'
+WHERE questiontext= 'Country of Birth'
+	AND crftype = 'Study101 Father'
 
 UPDATE itmidw.[tblCrfTranslationField]
 	SET preferredFieldName = 'FPFHFBRTHCO'
 FROM ITMIDW.[tblCrfTranslationField] transF
-where questiontext = 'Country of Birth'
-	and crftype = 'Study101 Father'
+WHERE questiontext = 'Country of Birth'
+	AND crftype = 'Study101 Father'
 
 
 
