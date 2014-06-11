@@ -33,27 +33,29 @@ PRINT CONVERT(CHAR(23), @UpdatedOn, 121) + ' [usp_Study102CrfEventAnswers][' + @
 PRINT 'INSERT [ITMIDW].[dbo].[usp_Study102CrfEventAnswers]...'
 
 --*************************************
---******************102****************
+--**********--drop table***************
 --*************************************
---drop table
+
 IF OBJECT_ID('tempdb..#sourceCrfData') IS NOT NULL
 DROP TABLE #sourceCrfData
 
-
+--*************************************
+--***********INSERTS INTO TEMP TABLE***
+--*************************************
 SELECT 
-           CONVERT(Varchar(100),deets.patientDataPointDetailID) AS [sourceSystemFieldDataID]--** changed to varchar(100)
-           ,deets.fieldName AS [sourceSystemFieldDataLabel]
-           ,eve.crfEventID AS  [eventCrfID]
-           ,crf.crfID AS [crfVersionID]
-		   ,sub.subjectID AS subjectID
-           ,CONVERT(VARCHAR(4000),ISNULL(deets.itmiFieldValue,deets.fieldValue)) AS [fieldValue]
-           ,NULL AS [hadQuery]
-           ,CASE WHEN deets.queryStatus = 'Open' Then 1 ELSE 0 END AS [openQuery]
-           ,NULL AS [fieldValueOrdinal]
-		   ,deets.itmifieldID as fieldID
-           ,(SELECT ss.sourceSystemID FROM itmidw.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'DIFZ') AS [orgSourceSystemID]
-           ,GETDATE() [createDate]
-           ,'usp_Study102CrfEventAnswers' AS [createdBy]
+   CONVERT(VARCHAR(100),deets.patientDataPointDetailID) AS [sourceSystemFieldDataID]--** changed to VARCHAR(100)
+   ,deets.fieldName AS [sourceSystemFieldDataLabel]
+   ,eve.crfEventID AS  [eventCrfID]
+   ,crf.crfID AS [crfVersionID]
+   ,sub.subjectID AS subjectID
+   ,CONVERT(VARCHAR(4000),ISNULL(deets.itmiFieldValue,deets.fieldValue)) AS [fieldValue]
+   ,NULL AS [hadQuery]
+   ,CASE WHEN deets.queryStatus = 'Open' Then 1 ELSE 0 END AS [openQuery]
+   ,NULL AS [fieldValueOrdinal]
+   ,deets.itmifieldID as fieldID
+   ,(SELECT ss.sourceSystemID FROM itmidw.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'DIFZ') AS [orgSourceSystemID]
+   ,GETDATE() [createDate]
+   ,'usp_Study102CrfEventAnswers' AS [createdBy]
 INTO #sourceCrfData
 	FROM difzDBcopy.PatientDataPointDetail AS deets
 		INNER JOIN itmidw.tblSubject subject
@@ -68,9 +70,13 @@ INTO #sourceCrfData
 				AND sub.studyID = (select stud.studyID from itmidw.tblStudy stud where stud.studyshortID like '%102%')
 	WHERE deets.isactive = 1	
 		
+--*************************************
+--multi-select tables--****************
+--*************************************
 
---multi-select tables
---motherPregnancyLaborDeliveryID
+--*************************************
+--motherPregnancyLaborDeliveryID--*****
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	reason.motherLaborDeliveryAdmissionReasonID
@@ -86,17 +92,19 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.MotherLaborDeliveryAdmissionReasON reason
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = reason.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = reason.admissionReasonCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 WHERE reason.isactive = 1
 
---OBHistory
+--*************************************
+--OBHistory--**************************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID],subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT DISTINCT
 	ob.oBHistoryID
@@ -112,16 +120,17 @@ SELECT DISTINCT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.OBHistory ob
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = ob.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE ob.isactive = 1
 		
-
---ExerciseType
+--*************************************
+--ExerciseType--***********************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.exerciseTypeID
@@ -137,17 +146,19 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.ExerciseType exer
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = exer.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.exerciseTypeCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---PregnancyNutritionIntake
+--*************************************
+--PregnancyNutritionIntake--***********
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.pregnancyNutritionIntakeID
@@ -163,18 +174,20 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.PregnancyNutritionIntake exer
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = exer.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.nutritionIntakeAnswerCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 		AND exer.servingNumber IS NOT NULL
 
---PregnancyVaccination
+--*************************************		
+--PregnancyVaccination--***************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.pregnancyVaccinationID
@@ -190,18 +203,19 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.PregnancyVaccinatiON exer
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = exer.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.vaccinationCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 		
-
---PregnancyPastSickness
+--*************************************
+--PregnancyPastSickness--**************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.pregnancyPastSicknessID
@@ -217,18 +231,19 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.PregnancyPastSickness exer
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = exer.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.sicknessCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 		
-
---PregnancyAssistanceType
+--*************************************
+--PregnancyAssistanceType--************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.pregnancyAssistanceTypeID
@@ -244,17 +259,19 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.PregnancyAssistanceType exer
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = exer.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.assistanceCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---PregnancyMedicalCondition
+--*************************************	
+--PregnancyMedicalCondition--**********
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.pregnancyMedicalConditionID
@@ -270,17 +287,19 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.PregnancyMedicalConditiON exer
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = exer.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.medicalConditionCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---HRPAdmissionType
+--*************************************	
+--HRPAdmissionType--*********--********
+--*************************************	
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.hRPAdmissionTypeID
@@ -296,18 +315,23 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.HRPAdmissionType exer
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = exer.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.HRPAdmissionTypeCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
+--*************************************	
+--PregnancyConcomitantMedicatiON  --****
+--*************************************	
 
---PregnancyConcomitantMedicatiON  -medicationOnGoingIndicator
+--*************************************	
+--medicationOnGoingIndicator--**********
+--*************************************	
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.pregnancyConcomitantMedicationID  --this will group the medicatiON fields together
@@ -323,16 +347,18 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.PregnancyConcomitantMedicatiON exer
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = exer.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 		AND exer.medicationOngoingIndicator IS NOT NULL
 
---PregnancyConcomitantMedicatiON  -medicationDose
+--*************************************			
+--medicationDose--*********************
+--*************************************	
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.pregnancyConcomitantMedicationID  --this will group the medicatiON fields together
@@ -348,17 +374,18 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.PregnancyConcomitantMedicatiON exer
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = exer.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 		AND exer.dose IS NOT NULL
 
-
---PregnancyConcomitantMedicatiON  -medicationdoseUnit
+--*************************************	
+--medicationdoseUnit--*****************
+--*************************************	
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.pregnancyConcomitantMedicationID
@@ -374,17 +401,19 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.PregnancyConcomitantMedicatiON exer
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = exer.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.doseUnitCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---PregnancyConcomitantMedicatiON  -medicationFrequency
+--*************************************		
+--medicationFrequency--****************
+--*************************************	
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.pregnancyConcomitantMedicationID
@@ -400,17 +429,20 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.PregnancyConcomitantMedicatiON exer
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = exer.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.medicationFrequencyCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---PregnancyConcomitantMedicatiON  -MedicationRoute
+	
+--*************************************		
+--MedicationRoute--********************
+--*************************************	
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.pregnancyConcomitantMedicationID
@@ -426,17 +458,19 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.PregnancyConcomitantMedicatiON exer
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = exer.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.medicationRouteCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---PregnancyConcomitantMedicatiON  -MedicationIndication
+--*************************************	
+--MedicationIndication--***************
+--*************************************	
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.pregnancyConcomitantMedicationID
@@ -452,15 +486,17 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.PregnancyConcomitantMedicatiON exer
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = exer.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---LifeEventDetail
+--*************************************	
+--LifeEventDetail--********************
+--*************************************	
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.lifeEventDetailID
@@ -476,17 +512,20 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.LifeEventDetail exer
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = exer.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.lifeEventCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---HistopathologyResult
+	
+--*************************************	
+--HistopathologyResult--***************
+--*************************************	
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.histopathologyResultID
@@ -502,17 +541,19 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.HistopathologyResult exer
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = exer.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.histopathologyResultCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---PregnancyEarlyLaborOnsetDetail
+--*************************************	
+--PregnancyEarlyLaborOnsetDetail--*****
+--*************************************	
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.pregnancyEarlyLaborOnsetDetailID
@@ -528,19 +569,23 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.PregnancyEarlyLaborOnsetDetail exer
-	INNER JOIN ITMIDIFZ.[Genesis].[MotherPregnancyLaborDelivery] deliver
+	INNER JOIN difzDBcopy.[MotherPregnancyLaborDelivery] deliver
 		ON deliver.motherPregnancyLaborDeliveryID = exer.motherPregnancyLaborDeliveryID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = deliver.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.earlyLaborOnsetDetailCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 	
+--*************************************
+--**Participant AS parent--************
+--*************************************
 
---**Participant AS parent
---ParticipantGrowthCountry
+--*************************************
+--ParticipantGrowthCountry--***********
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.participantGrowthCountryID
@@ -561,10 +606,12 @@ FROM difzDBcopy.ParticipantGrowthCountry exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.growthCountryCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---ParticipantVitals
+--*************************************
+--ParticipantVitals--******************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.participantVitalsID
@@ -585,11 +632,12 @@ FROM difzDBcopy.ParticipantVitals exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.vitalTestCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
-
---ParticipantEventComment
+--*************************************
+--ParticipantEventComment--************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.participantEventCommentID
@@ -610,10 +658,12 @@ FROM difzDBcopy.ParticipantEventComment exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.eventTypeCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---ParticipantSupplementDetail
+--*************************************
+--ParticipantSupplementDetail--********
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.participantSupplementDetailID
@@ -634,11 +684,16 @@ FROM difzDBcopy.ParticipantSupplementDetail exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.supplementalCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
+--*************************************
+--MotherPregnancyLaborDelivery--*******
+--*************************************
 
---MotherPregnancyLaborDelivery - deliverTypeCode
+--*************************************
+--deliverTypeCode--********************
+--*************************************
 INSERT INTO #sourceCrfData (
 [sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], 
 [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
@@ -661,10 +716,12 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.deliveryTypeCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---MotherPregnancyLaborDelivery - cSectionTypeCode
+--*************************************
+--cSectionTypeCode--*******************
+--*************************************
 INSERT INTO #sourceCrfData (
 [sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], 
 [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
@@ -687,9 +744,12 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.CSectionTypeCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
---MotherPregnancyLaborDelivery - cSectionScheduleCode
+	
+--*************************************	
+--cSectionScheduleCode--***************
+--*************************************
 INSERT INTO #sourceCrfData (
 [sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], 
 [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
@@ -712,10 +772,12 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.CSectionScheduleCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---MotherPregnancyLaborDelivery - histopathologyPerformedCode
+--*************************************	
+--histopathologyPerformedCode--********
+--*************************************
 INSERT INTO #sourceCrfData (
 [sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], 
 [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
@@ -738,10 +800,12 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.histopathologyPerformedCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---MotherPregnancyLaborDelivery - endometriosisDiagnosisCode
+--*************************************
+--endometriosisDiagnosisCode--*********
+--*************************************
 INSERT INTO #sourceCrfData (
 [sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], 
 [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
@@ -764,10 +828,12 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.endometriosisDiagnosisCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---MotherPregnancyLaborDelivery - cervicalCerclageCode
+--*************************************	
+--cervicalCerclageCode--***************
+--*************************************
 INSERT INTO #sourceCrfData (
 [sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], 
 [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
@@ -790,10 +856,12 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.cervicalCerclageCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
-
---MotherPregnancyLaborDelivery - gestationsCode
+	
+--*************************************
+--gestationsCode--*********************
+--*************************************
 INSERT INTO #sourceCrfData (
 [sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], 
 [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
@@ -816,10 +884,12 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.gestationsCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---MotherPregnancyLaborDelivery - pregnancyModeCode
+--*************************************
+--pregnancyModeCode--******************
+--*************************************
 INSERT INTO #sourceCrfData (
 [sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], 
 [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
@@ -842,10 +912,12 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.pregnancyModeCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---MotherPregnancyLaborDelivery - HRPAdmissionCode
+--*************************************
+--HRPAdmissionCode--*******************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.motherPregnancyLaborDeliveryID
@@ -866,10 +938,12 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.HRPAdmissionCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---MotherPregnancyLaborDelivery - pregnancyWeightGainCode
+--*************************************	
+--pregnancyWeightGainCode--************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue],[hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.motherPregnancyLaborDeliveryID
@@ -890,10 +964,12 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.pregnancyWeightGainCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---MotherPregnancyLaborDelivery - dietTypeCode
+--*************************************
+--dietTypeCode--***********************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.motherPregnancyLaborDeliveryID
@@ -914,10 +990,12 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.dietTypeCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---MotherPregnancyLaborDelivery - dietRecall24HoruCode
+--*************************************
+--dietRecall24HoruCode--***************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.motherPregnancyLaborDeliveryID
@@ -938,10 +1016,14 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.dietRecall24HrCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---MotherPregnancyLaborDelivery - regularExerciseCode
+	
+
+--*************************************
+--regularExerciseCode--****************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.motherPregnancyLaborDeliveryID
@@ -962,10 +1044,12 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.regularExerciseCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---MotherPregnancyLaborDelivery - exerciseDurationCode
+--*************************************	
+--exerciseDurationCode--***************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.motherPregnancyLaborDeliveryID
@@ -986,10 +1070,12 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.exerciseDurationCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---MotherPregnancyLaborDelivery - exerciseFrequencyCode
+--*************************************
+--exerciseFrequencyCode--**************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.motherPregnancyLaborDeliveryID
@@ -1010,10 +1096,12 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.exerciseFrequencyCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---MotherPregnancyLaborDelivery - earlyLaborOnsetCode
+--*************************************
+--earlyLaborOnsetCode--****************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.motherPregnancyLaborDeliveryID
@@ -1034,10 +1122,12 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.earlyLaborOnsetCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---MotherPregnancyLaborDelivery - multipleBirthCode
+--*************************************	
+--multipleBirthCode--******************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.motherPregnancyLaborDeliveryID
@@ -1058,13 +1148,14 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.multipleBirthCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
 
 
-
---MotherPregnancyLaborDelivery - priorsicknessNotApplicable
+--*************************************
+--priorsicknessNotApplicable--*********
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.motherPregnancyLaborDeliveryID
@@ -1083,11 +1174,13 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = exer.participantID
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 		AND exer.priorSickNotApplicable IS NOT NULL
 
---MotherPregnancyLaborDelivery - dietNutritionNAIndicator
+--*************************************		
+--dietNutritionNAIndicator--***********
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.motherPregnancyLaborDeliveryID
@@ -1106,11 +1199,13 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = exer.participantID
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 		AND exer.dietNutritionNAIndicator IS NOT NULL
 
---MotherPregnancyLaborDelivery - lifeEventNAIndicator
+--*************************************		
+--lifeEventNAIndicator--***************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.motherPregnancyLaborDeliveryID
@@ -1129,11 +1224,14 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = exer.participantID
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 		AND exer.lifeEventNAIndicator IS NOT NULL
 
---MotherPregnancyLaborDelivery - LifeEventUnknownIndicator
+		
+--*************************************		
+--LifeEventUnknownIndicator--**********
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.motherPregnancyLaborDeliveryID
@@ -1152,14 +1250,15 @@ FROM difzDBcopy.MotherPregnancyLaborDelivery exer
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = exer.participantID
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 		AND exer.LifeEventUnknownIndicator IS NOT NULL
 
 
---ParticipantSurvey --NOT THERE
 
---ParticipantSurgicalProcedures
+--*************************************
+--ParticipantSurgicalProcedures--******
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.participantSurgicalProceduresID
@@ -1180,10 +1279,12 @@ FROM difzDBcopy.ParticipantSurgicalProcedures exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.procedureCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
-	
---ParticipantRace
+
+--*************************************
+--ParticipantRace--********************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.participantRaceID
@@ -1204,10 +1305,12 @@ FROM difzDBcopy.ParticipantRace exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.raceCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---ParticipantMedicalHistory
+--*************************************
+--ParticipantMedicalHistory--**********
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.participantMedicalHistoryID
@@ -1228,10 +1331,13 @@ FROM difzDBcopy.ParticipantMedicalHistory exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.conditionCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
+	
+--*************************************	
 --ParticipantMedicalHistory - FamHXCode
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.participantMedicalHistoryID
@@ -1250,11 +1356,13 @@ FROM difzDBcopy.ParticipantMedicalHistory exer
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = exer.participantID
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 		AND exer.famHXCode IS NOT NULL
 
+--*************************************
 --ParticipantMedicalHistory - medRecCode
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.participantMedicalHistoryID
@@ -1273,11 +1381,13 @@ FROM difzDBcopy.ParticipantMedicalHistory exer
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = exer.participantID
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 		AND exer.medRecCode IS NOT NULL
 
+--*************************************		
 --ParticipantMedicalHistory - selfReportCode
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.participantMedicalHistoryID
@@ -1296,12 +1406,13 @@ FROM difzDBcopy.ParticipantMedicalHistory exer
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = exer.participantID
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 		AND exer.selfReportCode IS NOT NULL
 
+--*************************************		
 --InfantBirthEvent - birth location
-
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.InfantBirthEventID
@@ -1322,11 +1433,16 @@ FROM difzDBcopy.InfantBirthEvent exer
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.birthLocationCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---***Infant
---InfantDischargeCondition
+--*************************************	
+--***Infant--**************************
+--*************************************
+
+--*************************************
+--InfantDischargeCondition--***********
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.infantDischargeConditionID
@@ -1342,17 +1458,20 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.InfantDischargeConditiON exer
-	INNER JOIN ITMIDIFZ.[Genesis].[InfantBirthEvent] be
+	INNER JOIN difzDBcopy.[InfantBirthEvent] be
 		ON be.InfantBirthEventID = exer.infantBirthEventID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = be.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.dischargeConditionCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---InfantOtherDetail
+	
+--*************************************
+--InfantOtherDetail--******************
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.infantOtherDetailID
@@ -1368,7 +1487,7 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.InfantOtherDetail exer
-	INNER JOIN ITMIDIFZ.[Genesis].[InfantBirthEvent] be
+	INNER JOIN difzDBcopy.[InfantBirthEvent] be
 		ON be.InfantBirthEventID = exer.infantBirthEventID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = be.participantID
@@ -1377,10 +1496,12 @@ FROM difzDBcopy.InfantOtherDetail exer
 	INNER JOIN difzDBcopy.PermissibleValues pvQuest
 		ON pvQuest.PermissibleValuesID = exer.questionCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---InfantInitialResuscitation
+--*************************************
+--InfantInitialResuscitation--*********
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.infantInitialResuscitationID
@@ -1396,17 +1517,20 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.InfantInitialResuscitatiON exer
-	INNER JOIN ITMIDIFZ.[Genesis].[InfantBirthEvent] be
+	INNER JOIN difzDBcopy.[InfantBirthEvent] be
 		ON be.InfantBirthEventID = exer.infantBirthEventID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = be.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.initialResuscitationCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---InfantPrematureBirthEvent
+	
+--*************************************	
+--InfantPrematureBirthEvent--**********
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.infantPrematureBirthEventID
@@ -1422,17 +1546,19 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.InfantPrematureBirthEvent exer
-	INNER JOIN ITMIDIFZ.[Genesis].[InfantBirthEvent] be
+	INNER JOIN difzDBcopy.[InfantBirthEvent] be
 		ON be.InfantBirthEventID = exer.infantBirthEventID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = be.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.eventCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
---InfantRespiratorySupport
+--*************************************
+--InfantRespiratorySupport--***********
+--*************************************
 INSERT INTO #sourceCrfData ([sourceSystemFieldDataID], [sourceSystemFieldDataLabel], [eventCrfID], [crfVersionID], subjectID, [fieldValue], [hadQuery], [openQuery], [fieldValueOrdinal], [orgSourceSystemID], [createDate], [createdBy])
 SELECT 
 	exer.infantRespiratorySupportID
@@ -1448,14 +1574,14 @@ SELECT
     , GETDATE() [createDate]
     , 'usp_Study102CrfEventAnswers' AS [createdBy]
 FROM difzDBcopy.InfantRespiratorySupport exer
-	INNER JOIN ITMIDIFZ.[Genesis].[InfantBirthEvent] be
+	INNER JOIN difzDBcopy.[InfantBirthEvent] be
 		ON be.InfantBirthEventID = exer.infantBirthEventID
     INNER JOIN difzDBcopy.Participant part
 		ON part.participantID = be.participantID
 	INNER JOIN difzDBcopy.PermissibleValues pv
 		ON pv.PermissibleValuesID = exer.respiratorySupportCode
 	INNER JOIN itmidw.tblSubject sub ON 
-		CONVERT(varchar(100), sub.sourceSystemSubjectID) = CONVERT(varchar(100), part.participantID)
+		CONVERT(VARCHAR(100), sub.sourceSystemSubjectID) = CONVERT(VARCHAR(100), part.participantID)
 	WHERE exer.isactive = 1
 
 --*********************
@@ -1538,8 +1664,9 @@ INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID]
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P8Q1] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P8Q1' ,sub.subjectID FROM etl.SurveyBaby6_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '6MonthBaby: v1') and ob.sourceSystemFieldID = 'P8Q1' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P8Q1] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P8Q1|AOT] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P8Q1|AOT' ,sub.subjectID FROM etl.SurveyBaby6_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '6MonthBaby: v1') and ob.sourceSystemFieldID = 'P8Q1|AOT' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P8Q1|AOT] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P9Q1] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P9Q1' ,sub.subjectID FROM etl.SurveyBaby6_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '6MonthBaby: v1') and ob.sourceSystemFieldID = 'P9Q1' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P9Q1] ,'') <> '' and crfeventID IS NOT NULL
-
---***Mom 6 Month select * FROM etl.SurveyMom6_Stage
+--*************************************--*************************************
+--***Mom 6 Month select * FROM etl.SurveyMom6_Stage--*************************
+--*************************************--*************************************
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P10Q1] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P10Q1' ,sub.subjectID FROM etl.SurveyMom6_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '6MonthMom: v1') and ob.sourceSystemFieldID = 'P10Q1' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P10Q1] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P10Q2] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P10Q2' ,sub.subjectID FROM etl.SurveyMom6_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '6MonthMom: v1') and ob.sourceSystemFieldID = 'P10Q2' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P10Q2] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P10Q3] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P10Q3' ,sub.subjectID FROM etl.SurveyMom6_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '6MonthMom: v1') and ob.sourceSystemFieldID = 'P10Q3' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P10Q3] ,'') <> '' and crfeventID IS NOT NULL
@@ -1595,8 +1722,9 @@ INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID]
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P9Q1] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P9Q1' ,sub.subjectID FROM etl.SurveyMom6_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '6MonthMom: v1') and ob.sourceSystemFieldID = 'P9Q1' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P9Q1] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P9Q2] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P9Q2' ,sub.subjectID FROM etl.SurveyMom6_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '6MonthMom: v1') and ob.sourceSystemFieldID = 'P9Q2' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P9Q2] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P9Q2|AOT] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P9Q2|AOT' ,sub.subjectID FROM etl.SurveyMom6_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '6MonthMom: v1') and ob.sourceSystemFieldID = 'P9Q2|AOT' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P9Q2|AOT] ,'') <> '' and crfeventID IS NOT NULL
-
---Baby 12
+--*************************************
+--Baby 12--****************************
+--*************************************
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [FilesFromSourceID] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','FilesFromSourceID' ,sub.subjectID FROM etl.SurveyBaby12_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '12MonthBaby: v1') and ob.sourceSystemFieldID = 'FilesFromSourceID' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([FilesFromSourceID] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P10Q1] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P10Q1' ,sub.subjectID FROM etl.SurveyBaby12_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '12MonthBaby: v1') and ob.sourceSystemFieldID = 'P10Q1' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P10Q1] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P11Q1] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P11Q1' ,sub.subjectID FROM etl.SurveyBaby12_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '12MonthBaby: v1') and ob.sourceSystemFieldID = 'P11Q1' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P11Q1] ,'') <> '' and crfeventID IS NOT NULL
@@ -1739,8 +1867,9 @@ INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID]
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P7Q3] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P7Q3' ,sub.subjectID FROM etl.SurveyBaby12_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '12MonthBaby: v1') and ob.sourceSystemFieldID = 'P7Q3' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P7Q3] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P8Q1] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P8Q1' ,sub.subjectID FROM etl.SurveyBaby12_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '12MonthBaby: v1') and ob.sourceSystemFieldID = 'P8Q1' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P8Q1] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P9Q1] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P9Q1' ,sub.subjectID FROM etl.SurveyBaby12_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '12MonthBaby: v1') and ob.sourceSystemFieldID = 'P9Q1' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P9Q1] ,'') <> '' and crfeventID IS NOT NULL
---******
---Mom 12
+--*************************************
+--Mom 12--*****************************
+--*************************************
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [FilesFromSourceID] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','FilesFromSourceID' ,sub.subjectID FROM etl.SurveyMom12_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '12MonthMom: v1') and ob.sourceSystemFieldID = 'FilesFromSourceID' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([FilesFromSourceID] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P1Q1] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P1Q1' ,sub.subjectID FROM etl.SurveyMom12_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '12MonthMom: v1') and ob.sourceSystemFieldID = 'P1Q1' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P1Q1] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P1Q2] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P1Q2' ,sub.subjectID FROM etl.SurveyMom12_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '12MonthMom: v1') and ob.sourceSystemFieldID = 'P1Q2' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P1Q2] ,'') <> '' and crfeventID IS NOT NULL
@@ -1765,9 +1894,9 @@ INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID]
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P6Q1|M1|R8] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P6Q1|M1|R8' ,sub.subjectID FROM etl.SurveyMom12_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '12MonthMom: v1') and ob.sourceSystemFieldID = 'P6Q1|M1|R8' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P6Q1|M1|R8] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P6Q1|M1|R9] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P6Q1|M1|R9' ,sub.subjectID FROM etl.SurveyMom12_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '12MonthMom: v1') and ob.sourceSystemFieldID = 'P6Q1|M1|R9' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P6Q1|M1|R9] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P6Q2|A1] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P6Q2|A1' ,sub.subjectID FROM etl.SurveyMom12_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '12MonthMom: v1') and ob.sourceSystemFieldID = 'P6Q2|A1' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P6Q2|A1] ,'') <> '' and crfeventID IS NOT NULL
-
---Baby 18
-
+--*************************************
+--Baby 18--****************************
+--*************************************
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P10Q1] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P10Q1' ,sub.subjectID FROM etl.SurveyBaby18_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '18MonthBaby: v1') and ob.sourceSystemFieldID = 'P10Q1' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P10Q1] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P11Q1] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P11Q1' ,sub.subjectID FROM etl.SurveyBaby18_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '18MonthBaby: v1') and ob.sourceSystemFieldID = 'P11Q1' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P11Q1] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P11Q2] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P11Q2' ,sub.subjectID FROM etl.SurveyBaby18_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '18MonthBaby: v1') and ob.sourceSystemFieldID = 'P11Q2' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P11Q2] ,'') <> '' and crfeventID IS NOT NULL
@@ -1896,8 +2025,9 @@ INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID]
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P9Q1] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P9Q1' ,sub.subjectID FROM etl.SurveyBaby18_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '18MonthBaby: v1') and ob.sourceSystemFieldID = 'P9Q1' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P9Q1] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P9Q2] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P9Q2' ,sub.subjectID FROM etl.SurveyBaby18_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '18MonthBaby: v1') and ob.sourceSystemFieldID = 'P9Q2' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P9Q2] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P9Q3] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P9Q3' ,sub.subjectID FROM etl.SurveyBaby18_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '18MonthBaby: v1') and ob.sourceSystemFieldID = 'P9Q3' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P9Q3] ,'') <> '' and crfeventID IS NOT NULL
-
---Mom  18
+--*************************************
+--Mom  18--****************************
+--*************************************
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [FilesFromSourceID] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','FilesFromSourceID' ,sub.subjectID FROM etl.SurveyMom18_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '18MonthMom: v1') and ob.sourceSystemFieldID = 'FilesFromSourceID' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([FilesFromSourceID] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P1Q1|M1|R1] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P1Q1|M1|R1' ,sub.subjectID FROM etl.SurveyMom18_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '18MonthMom: v1') and ob.sourceSystemFieldID = 'P1Q1|M1|R1' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P1Q1|M1|R1] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P1Q1|M1|R2] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P1Q1|M1|R2' ,sub.subjectID FROM etl.SurveyMom18_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '18MonthMom: v1') and ob.sourceSystemFieldID = 'P1Q1|M1|R2' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P1Q1|M1|R2] ,'') <> '' and crfeventID IS NOT NULL
@@ -1952,11 +2082,13 @@ INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID]
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P6Q4|M2|R1] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P6Q4|M2|R1' ,sub.subjectID FROM etl.SurveyMom18_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '18MonthMom: v1') and ob.sourceSystemFieldID = 'P6Q4|M2|R1' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P6Q4|M2|R1] ,'') <> '' and crfeventID IS NOT NULL
 INSERT INTO #sourceCrfData([sourceSystemFieldDataID],[eventCrfID],[crfVersionID],[fieldValue],[hadQuery],[openQuery],[fieldValueOrdinal],[orgSourceSystemID],[createDate], [createdBy], [sourceSystemFieldDataLabel], subjectID) SELECT DISTINCT ob.fieldID, Event.crfeventID,  event.crfVersionID, [P6Q4|R1|M1] , 0, 0, NULL, 6, GETDATE(), 'usp_Study102CrfEventAnswers ','P6Q4|R1|M1' ,sub.subjectID FROM etl.SurveyMom18_Stage ss  INNER JOIN itmidw.tblCrfFields ob ON ob.crfVersionID =  (SELECT v.crfVersionID from itmidw.tblCrfVersion v where v.crfVersionName = '18MonthMom: v1') and ob.sourceSystemFieldID = 'P6Q4|R1|M1' INNER JOIN itmidw.tblSubject sub ON sub.sourceSystemIDLabel = ss.[family ID]  LEFT JOIN itmidw.tblCrfEvent event ON event.[sourceSystemCrfEventID] = ss.[family ID] WHERE ISNULL ([P6Q4|R1|M1] ,'') <> '' and crfeventID IS NOT NULL
 
---Slowly changing dimension
+--*************************************
+--Slowly changing dimension--**********
+--*************************************
 MERGE  itmidw.[tblCrfEventAnswers] AS targetCrfData
 USING #sourceCrfData ss
-	ON CONVERT(varchar(100),targetCrfData.[sourceSystemFieldDataID]) = CONVERT(varchar(100),ss.[sourceSystemFieldDataID])
-		AND CONVERT(varchar(100),targetCrfData.[sourceSystemFieldDataLabel]) = CONVERT(varchar(100),ss.[sourceSystemFieldDataLabel])
+	ON CONVERT(VARCHAR(100),targetCrfData.[sourceSystemFieldDataID]) = CONVERT(VARCHAR(100),ss.[sourceSystemFieldDataID])
+		AND CONVERT(VARCHAR(100),targetCrfData.[sourceSystemFieldDataLabel]) = CONVERT(VARCHAR(100),ss.[sourceSystemFieldDataLabel])
 		AND targetCrfData.crfVersionID = ss.crfVersionID
 		AND targetCrfData.subjectID = ss.subjectID
 		AND targetCrfData.eventCrfID = ss.eventCrfID
@@ -2022,8 +2154,9 @@ VALUES (    ss.[sourceSystemFieldDataID]
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ ' slowly changing tblCrfEventAnswers row(s) updated.'
 
-
---cleanup
+--*************************************
+--cleanup--****************************
+--*************************************
 UPDATE itmidw.tblCrfEventAnswers SET fieldValue =
 CONVERT(VARCHAR(100), CONVERT(DATETIME,
  crfA.fieldValue
@@ -2045,6 +2178,9 @@ and ISDATE(
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ 'Clean up of dates tblCrfEventAnswers row(s) updated.'
 
+--*************************************
+--**********Date cleanup**************
+--*************************************
 UPDATE itmidw.tblCrfEventAnswers SET fieldValue =
   CONVERT(VARCHAR(100),
   CONVERT(DATETIME,
@@ -2098,6 +2234,9 @@ ELSE '' END
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ '2nd Clean up of dates tblCrfEventAnswers row(s) updated.'
 
+--*************************************
+--****More date cleanup****************
+--*************************************
 
 UPDATE itmidw.tblcrfeventAnswers SET FieldValue = 
 	CONVERT(VARCHAR(100),
@@ -2122,6 +2261,9 @@ and ISDATE(
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ '3rd Clean up of dates tblCrfEventAnswers row(s) updated.'
 
+--*************************************
+--***********third date cleanup********
+--*************************************
 UPDATE itmidw.tblcrfeventAnswers SET FieldValue = 
 CONVERT(VARCHAR(100),
 	CONVERT(DATETIME,
@@ -2149,7 +2291,7 @@ and ISDATE(
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ '4th Clean up of dates tblCrfEventAnswers row(s) updated.'
 
 
---**need update statement to confirm the ETL work for the surveys
+
 END
 
 
