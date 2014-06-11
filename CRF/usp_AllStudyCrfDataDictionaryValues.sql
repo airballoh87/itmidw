@@ -51,25 +51,20 @@ WHERE f.preferredFieldName = 'RACE';
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ ' update to preferred Name for Race row(s) updated.'	
 
-
---DD values insert
-
+--*************************************
+--DD values insert--*******************
+--*************************************
 
 INSERT INTO itmidw.[tblCrfDataDictionaryValues]
-           ([crfDataDictionaryID]
-           ,[CodedData]
-           ,[dataCodeStored]
-           ,[dataValue])
+   ([crfDataDictionaryID]
+   ,[CodedData]
+   ,[dataCodeStored]
+   ,[dataValue])
 SELECT
---(<crfDataDictionaryID, int,
 	dd.crfDataDictionaryID
---,<CodedData, nvarchar(255),>
 	, MAX(transFoptions.codedData) codedData
---,<dataCodeStored, nvarchar(255),>
 	, transFoptions.preferredName
---,<dataValue, varchar(255),>)
     , transFoptions.preferredName
---select transFoptions.*
 FROM itmidw.tblCrfDataDictionary dd
 	INNER JOIN itmidw.[tblCrfTranslationField] transF
 		ON dd.preferredFieldName = transF.preferredFieldName
@@ -77,13 +72,11 @@ FROM itmidw.tblCrfDataDictionary dd
 		ON transF.crfTranslationFieldID = transFoptions.CrfTranslationFieldID	
 	LEFT JOIN itmidw.[tblCrfDataDictionaryValues] ddVal	
 		ON ddVal.crfDataDictionaryID = dd.crfDataDictionaryID
-			and transFoptions.preferredName = ddval.dataCodeStored
+			AND transFoptions.preferredName = ddval.dataCodeStored
 WHERE transFoptions.preferredName IS NOT NULL
 	AND ddVal.crfDataDictionaryID IS NULL --only bringing in new records that are not in DD already
 GROUP BY transFoptions.preferredName,	dd.crfDataDictionaryID
 
-
---for re-creation purposes only
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ ' row(s) updated.'
 
 END
