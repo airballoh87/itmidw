@@ -81,6 +81,7 @@ WHERE study.studyShortID = '101'
 MERGE  itmidw.[tblSpecimen] AS targetSpecimen
 USING #sourceSpecimen ss
 	ON targetSpecimen.[sourceSystemSpecimenID] = ss.[sourceSystemSpecimenID]
+		AND targetSpecimen.[orgSourceSystemID] = ss.[orgSourceSystemID]  
 WHEN MATCHED
 	AND (
    ss.specimenBarcode <> targetSpecimen.specimenBarcode OR
