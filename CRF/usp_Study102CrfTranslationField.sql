@@ -19,7 +19,7 @@ Date Modified By QC# Purposes
 USE CASE:
 EXEC [usp_Study102CrfTranslationField]
 --TRUNCATe table itmidw.[tblCrfDataDictionary] 
-select  * FROM itmidw.[tblCrfDataDictionary] 
+SELECT  * FROM itmidw.[tblCrfDataDictionary] 
 **************************************************************************/
 CREATE PROCEDURE itmidw.[usp_Study102CrfTranslationField]
 AS
@@ -34,7 +34,9 @@ PRINT 'INSERT [ITMIDW].itmidw.[usp_Study102CrfTranslationField]...'
 --******************102****************
 --*************************************
 
-
+--*************************************
+--**************INSERT  ***************
+--*************************************
 
 TRUNCATE TABLE itmidw.[tblCrfTranslationField]
 --
@@ -54,19 +56,19 @@ INSERT INTO itmidw.[tblCrfTranslationField]
            ,[orgSourceSystemID]
            ,[createDate]
            ,[createdBy])
-select  DISTINCT
+SELECT  DISTINCT
 	sub.studyID
 	, study.studyName
 	, crf.crfID
 	, vers.crfVersionName
 	, crfA.sourceSystemFieldDataLabel
-	, fields.questionText as QuestionText
-	, NULL as preferredName
-	, fields.crfSourceSystemFieldOrder as FieldOrder
-    , fields.fieldID as [fieldID]
-    , fields.fieldName as [fieldName]
-    , fields.fieldDescription as [fieldDescription]
-	, vers.crfVersionID as [crfVersionID]
+	, fields.questionText AS QuestionText
+	, NULL AS preferredName
+	, fields.crfSourceSystemFieldOrder AS FieldOrder
+    , fields.fieldID AS [fieldID]
+    , fields.fieldName AS [fieldName]
+    , fields.fieldDescription AS [fieldDescription]
+	, vers.crfVersionID AS [crfVersionID]
 	, (SELECT ss.sourceSystemID FROM itmidw.tblSourceSystem ss WHERE ss.sourceSystemSHortName = 'DIFZ') AS [orgSourceSystemID]
     , GETDATE() [createDate]
     ,'usp_Study102CrfTranslationField' AS [createdBy]
@@ -75,7 +77,7 @@ FROM itmidw.[tblCrfEventAnswers] crfA
 		ON sub.subjectID = crfA.subjectID
 	INNER JOIN itmidw.tblStudy study
 		ON study.studyID= sub.studyID
-	INNER JOIN tblcrfversion vers
+	INNER JOIN itmidw.tblcrfversion vers
 		ON vers.crfVersionID = crfA.crfVersionID
 	INNER JOIN itmidw.tblcrf crf
 		ON crf.crfID = vers.crfID
@@ -84,10 +86,12 @@ FROM itmidw.[tblCrfEventAnswers] crfA
 
 		PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ ' row(s) updated.'
 
---update to tblCrfTranslationField
-UPDATE itmidw.tblCrfEventAnswers set CrfTranslationFieldID = transF.CrfTranslationFieldID
+--*************************************
+--update to tblCrfTranslationField--***
+--*************************************
+UPDATE itmidw.tblCrfEventAnswers SET CrfTranslationFieldID = transF.CrfTranslationFieldID
 		FROM itmidw.tblCrfEventAnswers crfA
-			left JOIN itmidw.tblcrfversion vers
+			LEFT JOIN itmidw.tblcrfversion vers
 		ON vers.crfVersionID = crfA.crfVersionID
 	INNER JOIN ITMIDW.tblcrf crf
 		ON crf.crfID = vers.crfID
@@ -95,18 +99,21 @@ UPDATE itmidw.tblCrfEventAnswers set CrfTranslationFieldID = transF.CrfTranslati
 		ON fields.sourceSystemFieldID = crfA.sourceSystemFieldDataLabel
 			and fields.cdeID = crf.crfShortName
 	INNER JOIN itmidw.tblCrfTranslationField  transF
-		on fields.questionText = transF.questionText
-		and crf.crfID = transF.crfID
-		and transF.orgsourcesystemID= 3
+		ON fields.questionText = transF.questionText
+		AND crf.crfID = transF.crfID
+		AND transF.orgsourcesystemID= 3
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ ' update to crfTranslation tblCrfEventAnswers row(s) updated.'
 
-UPDATE itmidw.tblCrfEventAnswers set CrfTranslationFieldID =  transF.CrfTranslationFieldID 
+--*************************************
+--****update back to event answers*****
+--*************************************
+UPDATE itmidw.tblCrfEventAnswers SET CrfTranslationFieldID =  transF.CrfTranslationFieldID 
 FROM itmidw.tblCrfEventAnswers crfa
 	INNER JOIN itmidw.tblCrfTranslationField  transF
-		on transF.QuestionText = crfa.sourceSystemFieldDataLabel
-where crfa.CrfTranslationFieldID IS NULL
-and crfa.orgsourcesystemID= 3
+		ON transF.QuestionText = crfa.sourceSystemFieldDataLabel
+WHERE crfa.CrfTranslationFieldID IS NULL
+AND crfa.orgsourcesystemID= 3
 
 
 PRINT CAST(@@ROWCOUNT AS VARCHAR(10))+ ' 2nd update to crfTranslation tblCrfEventAnswers  row(s) updated.'
